@@ -998,14 +998,9 @@ bool menuModelFailsafe(event_t event)
       lcdDrawSolidFilledRect(xChannel, y+4, lenChannel, 5, TEXT_COLOR);
       lcdDrawSolidFilledRect(xFailsafe, y+9, lenFailsafe, 5, ALARM_COLOR);
 
-      ch++;
-	  
-      if (ch >= NUM_CHANNELS(g_moduleIdx))
+      if (++ch >= NUM_CHANNELS(g_moduleIdx))
         break;
     }
-
-	if (ch >= NUM_CHANNELS(g_moduleIdx))
-      break;
   }
 
   return true;
