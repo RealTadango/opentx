@@ -43,14 +43,14 @@ void putsEdgeDelayParam(coord_t x, coord_t y, LogicalSwitchData *cs, uint8_t lat
 {
   lcdDrawChar(x-4, y, '[');
   lcdDrawNumber(x, y, lswTimerValue(cs->v2), LEFT|PREC1|lattr);
-  lcdDrawChar(lcdLastPos, y, ':');
+  lcdDrawChar(lcdLastRightPos, y, ':');
   if (cs->v3 < 0)
-    lcdDrawText(lcdLastPos+3, y, "<<", rattr);
+    lcdDrawText(lcdLastRightPos+3, y, "<<", rattr);
   else if (cs->v3 == 0)
-    lcdDrawText(lcdLastPos+3, y, "--", rattr);
+    lcdDrawText(lcdLastRightPos+3, y, "--", rattr);
   else
-    lcdDrawNumber(lcdLastPos+3, y, lswTimerValue(cs->v2+cs->v3), LEFT|PREC1|rattr);
-  lcdDrawChar(lcdLastPos, y, ']');
+    lcdDrawNumber(lcdLastRightPos+3, y, lswTimerValue(cs->v2+cs->v3), LEFT|PREC1|rattr);
+  lcdDrawChar(lcdLastRightPos, y, ']');
 }
 
 #define CSWONE_2ND_COLUMN (11*FW)
@@ -445,7 +445,17 @@ void menuModelLogicalSwitches(event_t event)
           CHECK_INCDEC_MODELVAR_ZERO(event, cs->func, LS_FUNC_MAX);
           uint8_t new_cstate = lswFamily(cs->func);
           if (cstate != new_cstate) {
-            cs->v1 = cs->v2 = (new_cstate==LS_FAMILY_TIMER ? -119/*1.0*/ : 0);
+#if defined(CPUARM)
+            unsigned int save_func = cs->func;
+            memset(cs, 0, sizeof(LogicalSwitchData));
+            cs->func = save_func;
+#else
+            cs->v1 = cs->v2 = 0;
+            cs->andsw = 0;
+#endif
+            if (new_cstate == LS_FAMILY_TIMER) {
+              cs->v1 = cs->v2 = -119; // 1.0
+            }
           }
           break;
         }
