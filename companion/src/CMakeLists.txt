@@ -1,8 +1,16 @@
+set(SIMULATOR_INSTALL_PREFIX "" CACHE STRING "Alternative simulator library search path")
+
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   set(C9X_NAME_SUFFIX ${VERSION_MAJOR}${VERSION_MINOR})
   set(COMPANION_NAME "companion${C9X_NAME_SUFFIX}")
   set(SIMULATOR_NAME "simulator${C9X_NAME_SUFFIX}")
-  set(SIMULATOR_LIB_PATH ${CMAKE_INSTALL_PREFIX}/lib/companion${C9X_NAME_SUFFIX})
+  if (NOT ${SIMULATOR_INSTALL_PREFIX} STREQUAL "")
+    set(SIMULATOR_LIB_PATH ${SIMULATOR_INSTALL_PREFIX}/lib/companion${C9X_NAME_SUFFIX})
+  else()
+    set(SIMULATOR_LIB_PATH ${CMAKE_INSTALL_PREFIX}/lib/companion${C9X_NAME_SUFFIX})
+  endif()
+  message(STATUS "Simulators library search path: " ${SIMULATOR_LIB_PATH})
+  set(SIMULATOR_LIB_INSTALL_PATH ${CMAKE_INSTALL_PREFIX}/lib/companion${C9X_NAME_SUFFIX})
 else(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   set(COMPANION_NAME "companion")
   set(SIMULATOR_NAME "simulator")
@@ -318,7 +326,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   message(STATUS "install " ${CMAKE_BINARY_DIR} " to " ${CMAKE_INSTALL_PREFIX}/bin)
   install(TARGETS ${COMPANION_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
   install(TARGETS ${SIMULATOR_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
-  install(FILES ${simulator_plugins} DESTINATION "${SIMULATOR_LIB_PATH}")
+  install(FILES ${simulator_plugins} DESTINATION "${SIMULATOR_LIB_INSTALL_PATH}")
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/companion.desktop DESTINATION share/applications RENAME companion${C9X_NAME_SUFFIX}.desktop)
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/simulator.desktop DESTINATION share/applications RENAME simulator${C9X_NAME_SUFFIX}.desktop)
   if(${CMAKE_INSTALL_PREFIX} MATCHES "/usr/local")
@@ -474,7 +482,6 @@ IF(APPLE)
       RUNTIME DESTINATION bin COMPONENT Runtime
       )
 
-
   install(FILES ${simulator_plugins} DESTINATION "${companion_res_dir}" COMPONENT Runtime)
 
   # Write qt.conf to tell qt where to find it plugins
@@ -488,7 +495,7 @@ IF(APPLE)
   install(DIRECTORY ${PROJECT_SOURCE_DIR}/companion/targets/mac/qt_menu.nib DESTINATION "${companion_res_dir}" COMPONENT Runtime)
 
   # manually add the required plugins
-  foreach (plugin ${Qt5Multimedia_PLUGINS} ${Qt5PrintSupport_PLUGINS} ${Qt5Gui_PLUGINS})
+  foreach (plugin ${Qt5Multimedia_PLUGINS} ${Qt5PrintSupport_PLUGINS} ${Qt5Gui_PLUGINS} ${Qt5Svg_PLUGINS})
     get_target_property(QPA_PLUGIN ${plugin} LOCATION)
     get_filename_component(QPA_PLUGIN_FILENAME ${QPA_PLUGIN} NAME)
     # Todo is there a nicer way to get the QT Plugin directory name?!
