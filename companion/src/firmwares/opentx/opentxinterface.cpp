@@ -1178,6 +1178,16 @@ void addOpenTxLcdOptions(OpenTxFirmware * firmware)
   firmware->addOptions(lcd_options);
 }
 
+void addOpenTxVoiceOptions(OpenTxFirmware * firmware)
+{
+  Option voice_options[] = {
+    {"WTV20",     	QObject::tr("WTV20 voice module")},
+    {"JQ6500", 		QObject::tr("JQ6500 voice module")},
+    {NULL}
+  };
+  firmware->addOptions(voice_options);
+}
+
 QList<OpenTxEepromInterface *> opentxEEpromInterfaces;
 
 void registerOpenTxFirmware(OpenTxFirmware * firmware)
@@ -1255,7 +1265,6 @@ void registerOpenTxFirmwares()
   /* 9XR-Pro */
   firmware = new OpenTxFirmware("opentx-9xrpro", QObject::tr("Turnigy 9XR-PRO"), BOARD_9XRPRO);
   firmware->addOption("heli", QObject::tr("Enable HELI menu and cyclic mix support"));
-  firmware->addOption("templates", QObject::tr("Enable TEMPLATES menu"));
   firmware->addOption("nofp", QObject::tr("No flight modes"));
   firmware->addOption("gvars", QObject::tr("Global variables"), GVARS_VARIANT);
   firmware->addOption("potscroll", QObject::tr("Pots use in menus navigation"));
@@ -1404,7 +1413,6 @@ void registerOpenTxFirmwares()
   /* ar9x board */
   firmware = new OpenTxFirmware("opentx-ar9x", QObject::tr("9X with AR9X board"), BOARD_AR9X);
   firmware->addOption("heli", QObject::tr("Enable HELI menu and cyclic mix support"));
-  firmware->addOption("templates", QObject::tr("Enable TEMPLATES menu"));
   firmware->addOption("nofp", QObject::tr("No flight modes"));
   firmware->addOption("gvars", QObject::tr("Global variables"), GVARS_VARIANT);
   firmware->addOption("potscroll", QObject::tr("Pots use in menus navigation"));
@@ -1425,7 +1433,6 @@ void registerOpenTxFirmwares()
   /* Sky9x board */
   firmware = new OpenTxFirmware("opentx-sky9x", QObject::tr("9X with Sky9x board"), BOARD_SKY9X);
   firmware->addOption("heli", QObject::tr("Enable HELI menu and cyclic mix support"));
-  firmware->addOption("templates", QObject::tr("Enable TEMPLATES menu"));
   firmware->addOption("nofp", QObject::tr("No flight modes"));
   firmware->addOption("gvars", QObject::tr("Global variables"), GVARS_VARIANT);
   firmware->addOption("potscroll", QObject::tr("Pots use in menus navigation"));
@@ -1480,7 +1487,8 @@ void registerOpenTxFirmwares()
   firmware->addOption("nocurves", QObject::tr("Disable curves menus"));
   firmware->addOption("sdcard", QObject::tr("Support for SD memory card"));
   firmware->addOption("audio", QObject::tr("Support for radio modified with regular speaker"));
-  firmware->addOption("voice", QObject::tr("Used if you have modified your radio with voice mode"));
+  //firmware->addOption("voice", QObject::tr("Used if you have modified your radio with voice mode"));
+  addOpenTxVoiceOptions(firmware);
   firmware->addOption("haptic", QObject::tr("Used if you have modified your radio with haptic mode"));
   firmware->addOption("ppmca", QObject::tr("PPM center adjustment in limits"));
   firmware->addOption("gvars", QObject::tr("Global variables"), GVARS_VARIANT);
@@ -1506,6 +1514,7 @@ void unregisterOpenTxFirmwares()
   foreach (Firmware * f, firmwares) {
     delete f;
   }
+  unregisterEEpromInterfaces();
 }
 
 template <class T, class M>

@@ -19,13 +19,13 @@
  */
 
 #include <QApplication>
-#include <QTranslator>
+#include <QDir>
 #include <QLibraryInfo>
 #include <QLocale>
-#include <QString>
-#include <QDir>
-#include <QTextStream>
 #include <QMessageBox>
+#include <QString>
+#include <QTextStream>
+#include <QTranslator>
 #if defined(JOYSTICKS) || defined(SIMU_AUDIO)
   #include <SDL.h>
   #undef main
@@ -34,6 +34,7 @@
 #include "appdata.h"
 #include "appdebugmessagehandler.h"
 #include "constants.h"
+#include "customdebug.h"
 #include "eeprominterface.h"
 #include "simulator.h"
 #include "simulatormainwindow.h"
@@ -65,42 +66,43 @@ void sharedHelpText(QTextStream &stream)
   }
   // list all available radios
   stream << endl << QObject::tr("Available radios:") << endl;
-  foreach(QString name, registered_simulators.keys()) {
+  foreach(QString name, SimulatorLoader::getAvailableSimulators()) {
     stream << "\t" << name << endl;
   }
 }
 
-QString findFirmwareId(int profileId)
-{
-  SimulatorFactory * sf = getSimulatorFactory(g.profile[profileId].fwType());
-  if (sf)
-    return sf->name();
-  else
-    return QString();
-}
-
 int main(int argc, char *argv[])
 {
-  Q_INIT_RESOURCE(companion);
-
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 6, 0))
-  QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-#endif
 
   QApplication app(argc, argv);
   app.setApplicationName(APP_SIMULATOR);
   app.setOrganizationName(COMPANY);
   app.setOrganizationDomain(COMPANY_DOMAIN);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 6, 0))
+  app.setAttribute(Qt::AA_EnableHighDpiScaling);
+#endif
+
+  Q_INIT_RESOURCE(companion);
+  Q_INIT_RESOURCE(translations);
 
   if (AppDebugMessageHandler::instance())
     AppDebugMessageHandler::instance()->installAppMessageHandler();
 
+  CustomDebug::setFilterRules();
+
   g.init();
+
+  QString resultMsg;
 
   QTranslator companionTranslator;
   companionTranslator.load(":/companion_" + g.locale());
   QTranslator qtTranslator;
-  qtTranslator.load((QString)"qt_" + g.locale().left(2), QLibraryInfo::location(QLibraryInfo::TranslationsPath));
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 3, 0))
+  QString qtfile = "qtbase_";
+#else
+  QString qtfile = "qt_";
+#endif
+  qtTranslator.load(qtfile + g.locale().left(2), QLibraryInfo::location(QLibraryInfo::TranslationsPath));
   app.installTranslator(&companionTranslator);
   app.installTranslator(&qtTranslator);
 
@@ -124,9 +126,9 @@ int main(int argc, char *argv[])
 
   registerStorageFactories();
   registerOpenTxFirmwares();
-  registerSimulators();
+  SimulatorLoader::registerSimulators();
 
-  if (!registered_simulators.size()) {
+  if (!SimulatorLoader::getAvailableSimulators().size()) {
     showMessage(QObject::tr("ERROR: No simulator libraries available."), QMessageBox::Critical);
     return finish(3);
   }
@@ -139,20 +141,19 @@ int main(int argc, char *argv[])
   cliOptions.alias("help", "h");
   cliOptions.parse(QCoreApplication::arguments());
   if (cliOptions.count("help") || cliOptions.showUnrecognizedWarning()) {
-    QString msg;
-    QTextStream stream(&msg);
+    QTextStream stream(&resultMsg);
     stream << QObject::tr("Usage: simulator [OPTION]... [EEPROM.BIN FILE OR DATA FOLDER] ") << endl << endl;
     stream << QObject::tr("Options:") << endl;
     cliOptions.showUsage(false, stream);
     sharedHelpText(stream);
     // display
-    showMessage(msg, QMessageBox::Information);
+    showMessage(resultMsg, QMessageBox::Information);
     return finish(1);
   }
 
   // TODO : defaults should be set in Profile::init()
   if (simOptions.firmwareId.isEmpty())
-    simOptions.firmwareId = findFirmwareId(profileId);
+    simOptions.firmwareId = SimulatorLoader::findSimulatorByFirmwareName(g.profile[profileId].fwType());
   if (simOptions.dataFolder.isEmpty())
     simOptions.dataFolder = g.eepromDir();
   if (simOptions.sdPath.isEmpty())
@@ -206,28 +207,16 @@ int main(int argc, char *argv[])
   qDebug() << "profileId=" << profileId << simOptions;
 
   if (profileId < 0 || simOptions.firmwareId.isEmpty() || (simOptions.dataFile.isEmpty() && simOptions.dataFolder.isEmpty())) {
-    showMessage(QObject::tr("ERROR: Couldn't start simulator, missing radio/profile/data file/folder.\n  Profile ID: [%1]; Radio ID: [%2];\nData File: [%3]")
-                .arg(profileId).arg(simOptions.firmwareId, simOptions.dataFile), QMessageBox::Critical);
+    resultMsg = QObject::tr("ERROR: Couldn't start simulator, missing radio/profile/data file/folder.\n  Profile ID: [%1]; Radio ID: [%2];\nData File: [%3]");
+    showMessage(resultMsg.arg(profileId).arg(simOptions.firmwareId, simOptions.dataFile), QMessageBox::Critical);
     return finish(1);
   }
-  if (!g.getActiveProfiles().contains(profileId) || !registered_simulators.keys().contains(simOptions.firmwareId)) {
-    QString msg;
-    QTextStream stream(&msg);
+  if (!g.getActiveProfiles().contains(profileId) || !SimulatorLoader::getAvailableSimulators().contains(simOptions.firmwareId)) {
+    QTextStream stream(&resultMsg);
     stream << QObject::tr("ERROR: Radio profile or simulator firmware not found.\nProfile ID: [%1]; Radio ID: [%2]")
                     .arg(profileId).arg(simOptions.firmwareId);
     sharedHelpText(stream);
-    showMessage(msg, QMessageBox::Critical);
-    return finish(2);
-  }
-
-  SimulatorFactory * factory = getSimulatorFactory(simOptions.firmwareId);
-  if (!factory) {
-    showMessage(QObject::tr("ERROR: Simulator %1 not found").arg(simOptions.firmwareId), QMessageBox::Critical);
-    return finish(2);
-  }
-  SimulatorInterface * simulator = factory->create();
-  if (!simulator) {
-    showMessage(QObject::tr("ERROR: Failed to create simulator interface, possibly missing or bad library."), QMessageBox::Critical);
+    showMessage(resultMsg, QMessageBox::Critical);
     return finish(2);
   }
 
@@ -236,31 +225,40 @@ int main(int argc, char *argv[])
   g.sessionId(profileId);
   g.simuLastProfId(profileId);
 
-  int result = 1;
-  SimulatorMainWindow * mainWindow = new SimulatorMainWindow(NULL, simulator, SIMULATOR_FLAGS_STANDALONE);
-  if (mainWindow->setOptions(simOptions, true)) {
+  int result = 0;
+  SimulatorMainWindow * mainWindow = new SimulatorMainWindow(NULL, simOptions.firmwareId, SIMULATOR_FLAGS_STANDALONE);
+  if ((result = mainWindow->getExitStatus(&resultMsg))) {
+    if (resultMsg.isEmpty())
+      resultMsg = QObject::tr("Uknown error during Simulator startup.");
+    showMessage(resultMsg, QMessageBox::Critical);
+  }
+  else if (mainWindow->setOptions(simOptions, true)) {
     mainWindow->start();
     mainWindow->show();
     result = app.exec();
+    if (!result) {
+      if ((result = mainWindow->getExitStatus(&resultMsg)) && !resultMsg.isEmpty())
+        qWarning() << "Exit message from SimulatorMainWindow:" << resultMsg;
+    }
   }
   else {
     result = 3;
   }
-  delete mainWindow;
-  delete simulator;
 
+  delete mainWindow;
   return finish(result);
 }
 
 int finish(int exitCode)
 {
-  qDebug() << "SIMULATOR EXIT" << exitCode;
-  unregisterSimulators();
+  SimulatorLoader::unregisterSimulators();
   unregisterOpenTxFirmwares();
+  unregisterStorageFactories();
 
 #if defined(JOYSTICKS) || defined(SIMU_AUDIO)
   SDL_Quit();
 #endif
 
+  qDebug() << "SIMULATOR EXIT" << exitCode;
   return exitCode;
 }

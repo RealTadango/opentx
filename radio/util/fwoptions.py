@@ -190,7 +190,6 @@ options_mega2560.update(tts_avr)
 
 options_sky9x = {
     "heli": ("HELI", "YES", "NO"),
-    "templates": ("TEMPLATES", "YES", "NO"),
     "nofp": ("FLIGHT_MODES", "NO", "YES"),
     "ppmus": ("PPM_UNIT", "US", "PERCENT_PREC1"),
     "gvars": ("GVARS", "YES", "NO"),
@@ -206,12 +205,12 @@ options_sky9x = {
     "bluetooth": ("BLUETOOTH", "YES", "NO"),
     "faimode": ("FAI", "YES", None),
     "faichoice": ("FAI", "CHOICE", None),
-    "nooverridech": ("OVERRIDE_CHANNEL_FUNCTION", "NO", "YES")
+    "nooverridech": ("OVERRIDE_CHANNEL_FUNCTION", "NO", "YES"),
+    "multimodule": ("MULTIMODULE", "YES", "NO")
 }
 
 options_ar9x = {
     "heli": ("HELI", "YES", "NO"),
-    "templates": ("TEMPLATES", "YES", "NO"),
     "nofp": ("FLIGHT_MODES", "NO", "YES"),
     "ppmus": ("PPM_UNIT", "US", "PERCENT_PREC1"),
     "gvars": ("GVARS", "YES", "NO"),
@@ -229,6 +228,7 @@ options_ar9x = {
     "faichoice": ("FAI", "CHOICE", None),
     "nooverridech": ("OVERRIDE_CHANNEL_FUNCTION", "NO", "YES"),
     # "rtc": ("RTCLOCK", "YES", "NO"),
+    "multimodule": ("MULTIMODULE", "YES", "NO")
 }
 
 options_taranis = {

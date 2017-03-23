@@ -38,6 +38,7 @@
 #endif
 
 #include <QFile>
+#include <QMessageBox>
 #include <iostream>
 
 SimulatorWidget::SimulatorWidget(QWidget * parent, SimulatorInterface *simulator, quint8 flags):
@@ -54,7 +55,7 @@ SimulatorWidget::SimulatorWidget(QWidget * parent, SimulatorInterface *simulator
   flags(flags),
   lastPhase(-1),
   buttonPressed(0),
-  trimPressed(TRIM_NONE),
+  trimPressed(255),
   startupFromFile(false),
   deleteTempRadioData(false),
   saveTempRadioData(false),
@@ -99,6 +100,7 @@ SimulatorWidget::SimulatorWidget(QWidget * parent, SimulatorInterface *simulator
     keymapHelp.append(item);
 
   ui->radioUiWidget->layout()->removeItem(ui->radioUiTempSpacer);
+  delete ui->radioUiTempSpacer;
   ui->radioUiWidget->layout()->addWidget(radioUiWidget);
   radioUiWidget->setFocusPolicy(Qt::WheelFocus);
   radioUiWidget->setFocus();
@@ -111,13 +113,13 @@ SimulatorWidget::SimulatorWidget(QWidget * parent, SimulatorInterface *simulator
   vJoyRight = new VirtualJoystickWidget(this, 'R');
   ui->rightStickLayout->addWidget(vJoyRight);
 
-  connect(vJoyLeft, SIGNAL(trimButtonPressed(int)), this, SLOT(onTrimPressed(int)));
-  connect(vJoyLeft, SIGNAL(trimButtonReleased()), this, SLOT(onTrimReleased()));
-  connect(vJoyLeft, SIGNAL(trimSliderMoved(int,int)), this, SLOT(onTrimSliderMoved(int,int)));
+  connect(vJoyLeft, &VirtualJoystickWidget::trimButtonPressed, this, &SimulatorWidget::onTrimPressed);
+  connect(vJoyLeft, &VirtualJoystickWidget::trimButtonReleased, this, &SimulatorWidget::onTrimReleased);
+  connect(vJoyLeft, &VirtualJoystickWidget::trimSliderMoved, this, &SimulatorWidget::onTrimSliderMoved);
 
-  connect(vJoyRight, SIGNAL(trimButtonPressed(int)), this, SLOT(onTrimPressed(int)));
-  connect(vJoyRight, SIGNAL(trimButtonReleased()), this, SLOT(onTrimReleased()));
-  connect(vJoyRight, SIGNAL(trimSliderMoved(int,int)), this, SLOT(onTrimSliderMoved(int,int)));
+  connect(vJoyRight, &VirtualJoystickWidget::trimButtonPressed, this, &SimulatorWidget::onTrimPressed);
+  connect(vJoyRight, &VirtualJoystickWidget::trimButtonReleased, this, &SimulatorWidget::onTrimReleased);
+  connect(vJoyRight, &VirtualJoystickWidget::trimSliderMoved, this, &SimulatorWidget::onTrimSliderMoved);
 
   timer->setInterval(10);
   connect(timer, SIGNAL(timeout()), this, SLOT(onTimerEvent()));
@@ -582,25 +584,9 @@ void SimulatorWidget::setupRadioWidgets()
 void SimulatorWidget::setupJoysticks()
 {
 #ifdef JOYSTICKS
-  static bool joysticksEnabled = false;
-  if (g.jsSupport() && g.jsCtrl() > -1) {
-    int count=0, axe;
-    for (int j=0; j < MAX_JOYSTICKS; j++){
-      axe = g.joystick[j].stick_axe();
-      if (axe >= 0 && axe < MAX_JOYSTICKS) {
-        jsmap[axe] = j + 1;
-        jscal[axe][0] = g.joystick[j].stick_min();
-        jscal[axe][1] = g.joystick[j].stick_med();
-        jscal[axe][2] = g.joystick[j].stick_max();
-        jscal[axe][3] = g.joystick[j].stick_inv();
-        count++;
-      }
-    }
-    if (count<3) {
-      QMessageBox::critical(this, tr("Warning"), tr("Joystick enabled but not configured correctly"));
-      return;
-    }
+  bool joysticksEnabled = false;
 
+  if (g.jsSupport() && g.jsCtrl() > -1) {
     if (!joystick)
       joystick = new Joystick(this);
     else
@@ -612,24 +598,26 @@ void SimulatorWidget::setupJoysticks()
         joystick->sensitivities[j] = 0;
         joystick->deadzones[j] = 0;
       }
-      //mode 1,3 -> THR on right
-      vJoyRight->setStickConstraint(VirtualJoystickWidget::HOLD_Y, true);
-      vJoyRight->setStickConstraint(VirtualJoystickWidget::HOLD_X, true);
-      vJoyLeft->setStickConstraint(VirtualJoystickWidget::HOLD_Y, true);
-      vJoyLeft->setStickConstraint(VirtualJoystickWidget::HOLD_X, true);
-      connect(joystick, SIGNAL(axisValueChanged(int, int)), this, SLOT(onjoystickAxisValueChanged(int, int)));
+      connect(joystick, &Joystick::axisValueChanged, this, &SimulatorWidget::onjoystickAxisValueChanged);
       joysticksEnabled = true;
     }
     else {
       QMessageBox::critical(this, tr("Warning"), tr("Cannot open joystick, joystick disabled"));
     }
   }
-  else if (joysticksEnabled && joystick) {
+  else if (joystick) {
+    joystick->close();
     disconnect(joystick, 0, this, 0);
-    vJoyRight->setStickConstraint(VirtualJoystickWidget::HOLD_Y, false);
-    vJoyRight->setStickConstraint(VirtualJoystickWidget::HOLD_X, false);
-    vJoyLeft->setStickConstraint(VirtualJoystickWidget::HOLD_Y, false);
-    vJoyLeft->setStickConstraint(VirtualJoystickWidget::HOLD_X, false);
+    joystick->deleteLater();
+    joystick = NULL;
+  }
+  if (vJoyRight) {
+    vJoyRight->setStickConstraint(VirtualJoystickWidget::HOLD_X, joysticksEnabled);
+    vJoyRight->setStickConstraint(VirtualJoystickWidget::HOLD_Y, joysticksEnabled);
+  }
+  if (vJoyLeft) {
+    vJoyLeft->setStickConstraint(VirtualJoystickWidget::HOLD_X, joysticksEnabled);
+    vJoyLeft->setStickConstraint(VirtualJoystickWidget::HOLD_Y, joysticksEnabled);
   }
 #endif
 }
@@ -751,19 +739,19 @@ void SimulatorWidget::getValues()
 // Read stick trim values from firmware simulator and set joystick widgets as needed.
 void SimulatorWidget::setTrims()
 {
-  typedef VirtualJoystickWidget VJW;
+  using namespace Board;
   static Trims lastTrims;
   Trims trims;
   simulator->getTrims(trims);
 
-  if (trims.values[VJW::TRIM_AXIS_L_X] != lastTrims.values[VJW::TRIM_AXIS_L_X])
-    vJoyLeft->setTrimValue(VJW::TRIM_AXIS_L_X, trims.values[VJW::TRIM_AXIS_L_X]);
-  if (trims.values[VJW::TRIM_AXIS_L_Y] != lastTrims.values[VJW::TRIM_AXIS_L_Y])
-    vJoyLeft->setTrimValue(VJW::TRIM_AXIS_L_Y, trims.values[VJW::TRIM_AXIS_L_Y]);
-  if (trims.values[VJW::TRIM_AXIS_R_Y] != lastTrims.values[VJW::TRIM_AXIS_R_Y])
-    vJoyRight->setTrimValue(VJW::TRIM_AXIS_R_Y, trims.values[VJW::TRIM_AXIS_R_Y]);
-  if (trims.values[VJW::TRIM_AXIS_R_X] != lastTrims.values[VJW::TRIM_AXIS_R_X])
-    vJoyRight->setTrimValue(VJW::TRIM_AXIS_R_X, trims.values[VJW::TRIM_AXIS_R_X]);
+  if (trims.values[TRIM_AXIS_LH] != lastTrims.values[TRIM_AXIS_LH])
+    vJoyLeft->setTrimValue(TRIM_AXIS_LH, trims.values[TRIM_AXIS_LH]);
+  if (trims.values[TRIM_AXIS_LV] != lastTrims.values[TRIM_AXIS_LV])
+    vJoyLeft->setTrimValue(TRIM_AXIS_LV, trims.values[TRIM_AXIS_LV]);
+  if (trims.values[TRIM_AXIS_RV] != lastTrims.values[TRIM_AXIS_RV])
+    vJoyRight->setTrimValue(TRIM_AXIS_RV, trims.values[TRIM_AXIS_RV]);
+  if (trims.values[TRIM_AXIS_RH] != lastTrims.values[TRIM_AXIS_RH])
+    vJoyRight->setTrimValue(TRIM_AXIS_RH, trims.values[TRIM_AXIS_RH]);
 
   if (trims.extended != lastTrims.extended) {
     int trimMin = -125, trimMax = +125;
@@ -771,10 +759,10 @@ void SimulatorWidget::setTrims()
       trimMin = -500;
       trimMax = +500;
     }
-    vJoyLeft->setTrimRange(VJW::TRIM_AXIS_L_X, trimMin, trimMax);
-    vJoyLeft->setTrimRange(VJW::TRIM_AXIS_L_Y, trimMin, trimMax);
-    vJoyRight->setTrimRange(VJW::TRIM_AXIS_R_Y, trimMin, trimMax);
-    vJoyRight->setTrimRange(VJW::TRIM_AXIS_R_X, trimMin, trimMax);
+    vJoyLeft->setTrimRange(TRIM_AXIS_LH, trimMin, trimMax);
+    vJoyLeft->setTrimRange(TRIM_AXIS_LV, trimMin, trimMax);
+    vJoyRight->setTrimRange(TRIM_AXIS_RV, trimMin, trimMax);
+    vJoyRight->setTrimRange(TRIM_AXIS_RH, trimMin, trimMax);
   }
   lastTrims = trims;
 }
@@ -782,17 +770,6 @@ void SimulatorWidget::setTrims()
 /*
  * Event handlers/private slots
  */
-
-//void SimulatorDialog::showEvent(QShowEvent *)
-//{
-//  if (firstShow && isVisible()) {
-//    firstShow = false;
-//  }
-//}
-
-//void SimulatorDialog::closeEvent(QCloseEvent *)
-//{
-//}
 
 void SimulatorWidget::mousePressEvent(QMouseEvent *event)
 {
@@ -831,19 +808,19 @@ void SimulatorWidget::onTimerEvent()
   }
 }
 
-void SimulatorWidget::onTrimPressed(int which)
+void SimulatorWidget::onTrimPressed(int index)
 {
-  trimPressed = which;
+  trimPressed = index;
 }
 
-void SimulatorWidget::onTrimReleased()
+void SimulatorWidget::onTrimReleased(int)
 {
-  trimPressed = TRIM_NONE;
+  trimPressed = 255;
 }
 
-void SimulatorWidget::onTrimSliderMoved(int which, int value)
+void SimulatorWidget::onTrimSliderMoved(int index, int value)
 {
-  simulator->setTrim(which, value);
+  simulator->setTrim(index, value);
 }
 
 void SimulatorWidget::centerSticks()
@@ -858,38 +835,46 @@ void SimulatorWidget::centerSticks()
 void SimulatorWidget::onjoystickAxisValueChanged(int axis, int value)
 {
 #ifdef JOYSTICKS
-  int stick;
-  if (axis>=0 && axis<=8) {
-    stick=jsmap[axis];
-    int stickval;
-    if (value>jscal[axis][1]) {
-      if ((jscal[axis][2]-jscal[axis][1])==0)
-        return;
-      stickval=(1024*(value-jscal[axis][1]))/(jscal[axis][2]-jscal[axis][1]);
-    }
-    else {
-      if ((jscal[axis][1]-jscal[axis][0])==0)
-        return;
-      stickval=(1024*(value-jscal[axis][1]))/(jscal[axis][1]-jscal[axis][0]);
-    }
-    if (jscal[axis][3]==1) {
-      stickval*=-1;
-    }
-    if (stick==1 ) {
-      vJoyRight->setStickY(-stickval/1024.0);
-    }
-    else if (stick==2) {
-      vJoyRight->setStickX(stickval/1024.0);
-    }
-    else if (stick==3) {
-      vJoyLeft->setStickY(-stickval/1024.0);
-    }
-    else if (stick==4) {
-      vJoyLeft->setStickX(stickval/1024.0);
-    }
-    else if (stick >= 5 && stick < 5 + analogs.count()) {
-      analogs[stick-5]->setValue(stickval);
-    }
+  static const int ttlSticks = CPN_MAX_STICKS;
+  static const int valueRange = 1024;
+
+  if (!joystick || axis >= MAX_JOYSTICKS)
+    return;
+
+  int dlta;
+  int stick = g.joystick[axis].stick_axe();
+
+  if (stick < 0 || stick >= ttlSticks + analogs.count())
+    return;
+
+  int stickval = valueRange * (value - g.joystick[axis].stick_med());
+
+  if (value > g.joystick[axis].stick_med()) {
+    if ((dlta = g.joystick[axis].stick_max() - g.joystick[axis].stick_med()))
+      stickval /= dlta;
   }
+  else if ((dlta = g.joystick[axis].stick_med() - g.joystick[axis].stick_min())) {
+    stickval /= dlta;
+  }
+
+  if (g.joystick[axis].stick_inv())
+    stickval *= -1;
+
+  if (stick==1 ) {
+    vJoyRight->setStickY(-stickval/1024.0);
+  }
+  else if (stick==2) {
+    vJoyRight->setStickX(stickval/1024.0);
+  }
+  else if (stick==3) {
+    vJoyLeft->setStickY(-stickval/1024.0);
+  }
+  else if (stick==4) {
+    vJoyLeft->setStickX(stickval/1024.0);
+  }
+  else if (stick > ttlSticks) {
+    analogs[stick-ttlSticks-1]->setValue(stickval);
+  }
+
 #endif
 }

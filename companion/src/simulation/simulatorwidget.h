@@ -26,6 +26,7 @@
 #include "radiodata.h"
 #include "simulator.h"
 
+#include <QTimer>
 #include <QWidget>
 #include <QVector>
 
@@ -136,21 +137,17 @@ class SimulatorWidget : public QWidget
 
 #ifdef JOYSTICKS
     Joystick *joystick;
-    int jscal[8][4];
-    int jsmap[8];
 #endif
 
   private slots:
-    //virtual void showEvent(QShowEvent *);
-    //virtual void closeEvent(QCloseEvent *);
     virtual void mousePressEvent(QMouseEvent *event);
     virtual void mouseReleaseEvent(QMouseEvent *event);
     virtual void wheelEvent(QWheelEvent *event);
 
     void onTimerEvent();
-    void onTrimPressed(int which);
-    void onTrimReleased();
-    void onTrimSliderMoved(int which, int value);
+    void onTrimPressed(int index);
+    void onTrimReleased(int);
+    void onTrimSliderMoved(int index, int value);
     void centerSticks();
     void onjoystickAxisValueChanged(int axis, int value);
 
