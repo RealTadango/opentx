@@ -313,7 +313,7 @@ void RadioOutputsWidget::setValues()
     for (ch = m_channelsMap.constBegin(); ch != m_channelsMap.constEnd(); ++ch) {
       if (ch.key() >= CPN_MAX_CHNOUT)
         continue;
-      ch.value().first->setText(QString("%1%").arg((outputs.chans[ch.key()] * 100 + 512) / 1024));
+      ch.value().first->setText(QString("%1%").arg(calcRESXto100(outputs.chans[ch.key()])));
       ch.value().second->setValue(qMin(1024, qMax(-1024, outputs.chans[ch.key()])));
     }
   }
@@ -321,7 +321,7 @@ void RadioOutputsWidget::setValues()
   if (ui->logicalSwitchesWidget->isVisible()) {
     QHash<int, QLabel* >::const_iterator ls;
     for (ls = m_logicSwitchMap.constBegin(); ls != m_logicSwitchMap.constEnd(); ++ls) {
-      if (ls.key() >= CPN_MAX_CSW || (prevOutputs.vsw[ls.key()] == outputs.vsw[ls.key()] && m_lastFlightPhase > -1))
+      if (ls.key() >= CPN_MAX_LOGICAL_SWITCHES || (prevOutputs.vsw[ls.key()] == outputs.vsw[ls.key()] && m_lastFlightPhase > -1))
         continue;
       ls.value()->setBackgroundRole(outputs.vsw[ls.key()] ? QPalette::Dark : QPalette::Background);
       ls.value()->setForegroundRole(outputs.vsw[ls.key()] ? QPalette::BrightText : QPalette::WindowText);

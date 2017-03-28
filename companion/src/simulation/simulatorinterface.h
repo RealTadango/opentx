@@ -41,7 +41,7 @@ struct TxInputs
     int  switches[CPN_MAX_SWITCHES];
     bool keys[CPN_MAX_KEYS];
     bool rotenc;
-    bool trims[(CPN_MAX_STICKS + CPN_MAX_AUX_TRIMS) * 2];
+    bool trims[CPN_MAX_TRIM_SW];
 };
 
 class TxOutputs
@@ -49,7 +49,7 @@ class TxOutputs
   public:
     TxOutputs() { memset(this, 0, sizeof(TxOutputs)); }
     int chans[CPN_MAX_CHNOUT];
-    bool vsw[CPN_MAX_CSW];
+    bool vsw[CPN_MAX_LOGICAL_SWITCHES];
     int gvars[CPN_MAX_FLIGHT_MODES][CPN_MAX_GVARS];
     unsigned int beep;
     // uint8_t phase;
@@ -57,7 +57,7 @@ class TxOutputs
 
 struct Trims
 {
-  int values[CPN_MAX_STICKS + CPN_MAX_AUX_TRIMS]; /* lh lv rv rh t5 t6 */
+  int values[CPN_MAX_TRIMS]; /* lh lv rv rh t5 t6 */
   bool extended;
 };
 

@@ -211,14 +211,14 @@ class RawSource {
     {
     }
 
-    void convert(Board::Type before, Board::Type after);
+    RawSource convert(Board::Type before, Board::Type after);
 
     inline const int toValue() const
     {
       return index >= 0 ? (type * 65536 + index) : -(type * 65536 - index);
     }
 
-    QString toString(const ModelData * model = NULL) const;
+    QString toString(const ModelData * model = NULL, const GeneralSettings * const generalSettings = NULL) const;
 
     RawSourceRange getRange(const ModelData * model, const GeneralSettings & settings, unsigned int flags=0) const;
 
@@ -231,8 +231,8 @@ class RawSource {
     }
 
     bool isTimeBased() const;
-    bool isPot() const;
-    bool isSlider() const;
+    bool isPot(int * potsIndex = NULL) const;
+    bool isSlider(int * sliderIndex = NULL) const;
 
     RawSourceType type;
     int index;
@@ -277,7 +277,7 @@ class RawSwitch {
       return index >= 0 ? (type * 256 + index) : -(type * 256 - index);
     }
 
-    QString toString(Board::Type board = Board::BOARD_UNKNOWN) const;
+    QString toString(Board::Type board = Board::BOARD_UNKNOWN, const GeneralSettings * const generalSettings = NULL) const;
 
     bool operator== ( const RawSwitch& other) {
       return (this->type == other.type) && (this->index == other.index);
@@ -286,6 +286,8 @@ class RawSwitch {
     bool operator!= ( const RawSwitch& other) {
       return (this->type != other.type) || (this->index != other.index);
     }
+
+    RawSwitch convert(Board::Type before, Board::Type after);
 
     RawSwitchType type;
     int index;
@@ -338,6 +340,7 @@ class ExpoData {
     int carryTrim;
     char name[10+1];
     void clear() { memset(this, 0, sizeof(ExpoData)); }
+    void convert(Board::Type before, Board::Type after);
 };
 
 class CurvePoint {
@@ -468,6 +471,7 @@ class LogicalSwitchData { // Logical Switches data
     CSFunctionFamily getFunctionFamily() const;
     unsigned int getRangeFlags() const;
     QString funcToString() const;
+    void convert(Board::Type before, Board::Type after);
 };
 
 enum AssignFunc {
@@ -536,14 +540,16 @@ class CustomFunctionData { // Function Switches data
     static void populatePlaySoundParams(QStringList & qs);
     static void populateHapticParams(QStringList & qs);
 
+    void convert(Board::Type before, Board::Type after);
+
 };
 
 class FlightModeData {
   public:
     FlightModeData() { clear(0); }
-    int trimMode[CPN_MAX_STICKS+CPN_MAX_AUX_TRIMS];
-    int trimRef[CPN_MAX_STICKS+CPN_MAX_AUX_TRIMS];
-    int trim[CPN_MAX_STICKS+CPN_MAX_AUX_TRIMS];
+    int trimMode[CPN_MAX_TRIMS];
+    int trimRef[CPN_MAX_TRIMS];
+    int trim[CPN_MAX_TRIMS];
     RawSwitch swtch;
     char name[10+1];
     unsigned int fadeIn;
@@ -551,6 +557,7 @@ class FlightModeData {
     int rotaryEncoders[CPN_MAX_ENCODERS];
     int gvars[CPN_MAX_GVARS];
     void clear(const int phase);
+    void convert(Board::Type before, Board::Type after);
 };
 
 class SwashRingData { // Swash Ring data
@@ -1033,8 +1040,8 @@ class ModelData {
     ExpoData  expoData[CPN_MAX_EXPOS];
 
     CurveData curves[CPN_MAX_CURVES];
-    LogicalSwitchData  logicalSw[CPN_MAX_CSW];
-    CustomFunctionData customFn[CPN_MAX_CUSTOM_FUNCTIONS];
+    LogicalSwitchData  logicalSw[CPN_MAX_LOGICAL_SWITCHES];
+    CustomFunctionData customFn[CPN_MAX_SPECIAL_FUNCTIONS];
     SwashRingData swashRingData;
     unsigned int thrTraceSrc;
     uint64_t switchWarningStates;
@@ -1127,9 +1134,9 @@ class GeneralSettings {
 
     unsigned int version;
     unsigned int variant;
-    int   calibMid[CPN_MAX_STICKS+CPN_MAX_POTS+CPN_MAX_MOUSE_ANALOGS];
-    int   calibSpanNeg[CPN_MAX_STICKS+CPN_MAX_POTS+CPN_MAX_MOUSE_ANALOGS];
-    int   calibSpanPos[CPN_MAX_STICKS+CPN_MAX_POTS+CPN_MAX_MOUSE_ANALOGS];
+    int   calibMid[CPN_MAX_ANALOGS];
+    int   calibSpanNeg[CPN_MAX_ANALOGS];
+    int   calibSpanPos[CPN_MAX_ANALOGS];
     unsigned int  currModelIndex;
     char currModelFilename[16+1];
     unsigned int   contrast;
@@ -1200,14 +1207,14 @@ class GeneralSettings {
     unsigned int switchUnlockStates;
     unsigned int hw_uartMode;
     unsigned int backlightColor;
-    CustomFunctionData customFn[CPN_MAX_CUSTOM_FUNCTIONS];
-    char switchName[18][3+1];
+    CustomFunctionData customFn[CPN_MAX_SPECIAL_FUNCTIONS];
+    char switchName[CPN_MAX_SWITCHES][3+1];
     unsigned int switchConfig[CPN_MAX_SWITCHES];
-    char stickName[4][3+1];
-    char potName[4][3+1];
-    unsigned int potConfig[4];
-    char sliderName[4][3+1];
-    unsigned int sliderConfig[4];
+    char stickName[CPN_MAX_STICKS][3+1];
+    char potName[CPN_MAX_KNOBS][3+1];
+    unsigned int potConfig[CPN_MAX_KNOBS];
+    char sliderName[CPN_MAX_SLIDERS][3+1];
+    unsigned int sliderConfig[CPN_MAX_SLIDERS];
 
     char themeName[8+1];
     typedef uint8_t ThemeOptionData[8+1];
