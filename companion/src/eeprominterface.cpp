@@ -239,7 +239,7 @@ RawSourceRange RawSource::getRange(const ModelData * model, const GeneralSetting
 {
   RawSourceRange result;
 
-  Firmware * firmware = getCurrentFirmware();
+  Firmware * firmware = Firmware::getCurrentVariant();
   int board = firmware->getBoard();
   bool singleprec = (flags & RANGE_SINGLE_PRECISION);
 
@@ -689,7 +689,7 @@ QString RawSwitch::toString(Board::Type board, const GeneralSettings * const gen
             swName = QString(generalSettings->switchName[qr.quot]);
           if (swName.isEmpty())
             swName = getSwitchInfo(board, qr.quot).name;
-          return swName + directionIndicators.at(qr.rem < directionIndicators.size() ? qr.rem : 1);
+          return swName + directionIndicators.at(qr.rem > -1 && qr.rem < directionIndicators.size() ? qr.rem : 1);
         }
         else {
           return CHECK_IN_ARRAY(switches9X, index - 1);
@@ -699,6 +699,8 @@ QString RawSwitch::toString(Board::Type board, const GeneralSettings * const gen
         return QObject::tr("L%1").arg(index);
 
       case SWITCH_TYPE_MULTIPOS_POT:
+        if (!getCurrentFirmware()->getCapability(MultiposPotsPositions))
+          return QObject::tr("???");
         qr = div(index - 1, getCurrentFirmware()->getCapability(MultiposPotsPositions));
         if (generalSettings && qr.quot < (int)DIM(generalSettings->potConfig))
           swName = QString(generalSettings->potName[qr.quot]);
@@ -912,7 +914,7 @@ QString CustomFunctionData::funcToString() const
 void CustomFunctionData::populateResetParams(const ModelData * model, QComboBox * b, unsigned int value = 0)
 {
   int val = 0;
-  Firmware * firmware = getCurrentFirmware();
+  Firmware * firmware = Firmware::getCurrentVariant();
   Board::Type board = firmware->getBoard();
 
   b->addItem(QObject::tr("Timer1"), val++);
@@ -1138,7 +1140,7 @@ GeneralSettings::GeneralSettings()
     calibSpanPos[i] = 0x180;
   }
 
-  Firmware * firmware = getCurrentFirmware();
+  Firmware * firmware = Firmware::getCurrentVariant();
   Board::Type board = firmware->getBoard();
 
   for (int i=0; i<getBoardCapability(board, Board::FactoryInstalledSwitches); i++) {
@@ -1735,10 +1737,6 @@ void unregisterEEpromInterfaces()
   OpenTxEepromCleanup();
 }
 
-QList<Firmware *> firmwares;
-Firmware * default_firmware_variant;
-Firmware * current_firmware_variant;
-
 void ShowEepromErrors(QWidget *parent, const QString &title, const QString &mainMessage, unsigned long errorsFound)
 {
   std::bitset<NUM_ERRORS> errors((unsigned long long)errorsFound);
@@ -1790,16 +1788,22 @@ void ShowEepromWarnings(QWidget *parent, const QString &title, unsigned long err
   msgBox.exec();
 }
 
-Firmware * getFirmware(const QString & id)
+// static
+QVector<Firmware *> Firmware::registeredFirmwares;
+Firmware * Firmware::defaultVariant = NULL;
+Firmware * Firmware::currentVariant = NULL;
+
+// static
+Firmware * Firmware::getFirmwareForId(const QString & id)
 {
-  foreach(Firmware * firmware, firmwares) {
+  foreach(Firmware * firmware, registeredFirmwares) {
     Firmware * result = firmware->getFirmwareVariant(id);
     if (result) {
       return result;
     }
   }
 
-  return default_firmware_variant;
+  return defaultVariant;
 }
 
 void Firmware::addOption(const char *option, QString tooltip, uint32_t variant)

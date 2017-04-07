@@ -415,7 +415,8 @@ void MdiChild::generalEdit()
 
 void MdiChild::categoryAdd()
 {
-  CategoryData category("New category");
+  /*: Translators do NOT use accent for this, this is the default category name on Horus. */
+  CategoryData category(qPrintable(tr("New category")));
   radioData.categories.push_back(category);
   setModified();
   emit copyAvailable(false); // workaround : nothing is selected after model creation
@@ -651,7 +652,7 @@ bool MdiChild::saveAs(bool isNew)
 #ifdef __APPLE__
     fileName = QFileDialog::getSaveFileName(this, tr("Save As"), g.eepromDir() + "/" +fi.fileName());
 #else
-    fileName = QFileDialog::getSaveFileName(this, tr("Save As"), g.eepromDir() + "/" +fi.fileName(), tr(EEPROM_FILES_FILTER));
+    fileName = QFileDialog::getSaveFileName(this, tr("Save As"), g.eepromDir() + "/" +fi.fileName(), tr(OTX_FILES_FILTER));
 #endif
   }
   if (fileName.isEmpty())

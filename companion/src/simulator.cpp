@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
   if (!cliOptsFound || profileId == -1 || simOptions.firmwareId.isEmpty() || (simOptions.dataFile.isEmpty() && simOptions.dataFolder.isEmpty())) {
     SimulatorStartupDialog * dlg = new SimulatorStartupDialog(&simOptions, &profileId);
     int ret = dlg->exec();
-    dlg->deleteLater();
+    delete dlg;
     if (ret != QDialog::Accepted) {
       return finish(0);
     }
@@ -206,7 +206,7 @@ int main(int argc, char *argv[])
     return finish(2);
   }
 
-  current_firmware_variant = getFirmware(simOptions.firmwareId);
+  Firmware::setCurrentVariant(Firmware::getFirmwareForId(simOptions.firmwareId));
 
   g.sessionId(profileId);
   g.simuLastProfId(profileId);
@@ -219,7 +219,6 @@ int main(int argc, char *argv[])
     showMessage(resultMsg, QMessageBox::Critical);
   }
   else if (mainWindow->setOptions(simOptions, true)) {
-    mainWindow->start();
     mainWindow->show();
     result = app.exec();
     if (!result) {

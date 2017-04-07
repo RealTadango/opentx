@@ -254,6 +254,7 @@ unsigned long OpenTxEepromInterface::load(RadioData &radioData, const uint8_t * 
   if (version_error == OLD_VERSION) {
     errors.set(version_error);
     errors.set(HAS_WARNINGS);
+    ShowEepromWarnings(NULL, QObject::tr("Warning"), errors.to_ulong());
   }
   else if (version_error == NOT_OPENTX) {
     std::cout << " not open9x\n";
@@ -281,7 +282,6 @@ unsigned long OpenTxEepromInterface::load(RadioData &radioData, const uint8_t * 
       return errors.to_ulong();
     }
   }
-
   std::cout << " ok\n";
   errors.set(ALL_OK);
   return errors.to_ulong();
@@ -1154,6 +1154,7 @@ void addOpenTxFrskyOptions(OpenTxFirmware * firmware)
   firmware->addOption("nogvars", QObject::tr("Disable Global variables"));
   firmware->addOption("lua", QObject::tr("Support for Lua model scripts"));
   firmware->addOption("luac", QObject::tr("Enable Lua compiler"));
+  firmware->addOption("bindopt", QObject::tr("Enable bindings options"));
   Option usb_options[] = {{"massstorage", QObject::tr("Instead of Joystick emulation, USB connection is Mass Storage (as in the Bootloader)")},
                           {"cli",         QObject::tr("Instead of Joystick emulation, USB connection is Command Line Interface")},
                           {NULL}};
@@ -1198,7 +1199,7 @@ void registerOpenTxFirmware(OpenTxFirmware * firmware)
   firmware->setEEpromInterface(eepromInterface);
   opentxEEpromInterfaces.push_back(eepromInterface);
   eepromInterfaces.push_back(eepromInterface);
-  firmwares.push_back(firmware);
+  Firmware::addRegisteredFirmware(firmware);
 }
 
 void registerOpenTxFirmwares()
@@ -1507,13 +1508,13 @@ void registerOpenTxFirmwares()
   addOpenTxCommonOptions(firmware);
   registerOpenTxFirmware(firmware);
 
-  default_firmware_variant = getFirmware("opentx-x9d+");
-  current_firmware_variant = default_firmware_variant;
+  Firmware::setDefaultVariant(Firmware::getFirmwareForId("opentx-x9d+"));
+  Firmware::setCurrentVariant(Firmware::getDefaultVariant());
 }
 
 void unregisterOpenTxFirmwares()
 {
-  foreach (Firmware * f, firmwares) {
+  foreach (Firmware * f, Firmware::getRegisteredFirmwares()) {
     delete f;
   }
   unregisterEEpromInterfaces();

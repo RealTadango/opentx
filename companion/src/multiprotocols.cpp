@@ -25,7 +25,7 @@
 
 #define STR_MULTI_SUBTYPE                    QT_TRANSLATE_NOOP("Multiprotocols", "Subtype")
 #define STR_MULTI_VIDFREQ                    QT_TRANSLATE_NOOP("Multiprotocols", "Video TX frequency")
-#define STR_MULTI_RFTUNE                     QT_TRANSLATE_NOOP("Multiprotocols", "C2500 frequency fine tune")
+#define STR_MULTI_RFTUNE                     QT_TRANSLATE_NOOP("Multiprotocols", "CC2500 frequency fine tune")
 #define STR_MULTI_TELEMETRY                  QT_TRANSLATE_NOOP("Multiprotocols", "Telemetry")
 #define STR_MULTI_RFPOWER                    QT_TRANSLATE_NOOP("Multiprotocols", "Radio output power")
 #define STR_MULTI_SERVOFREQ                  QT_TRANSLATE_NOOP("Multiprotocols", "Servo output frequency")
@@ -85,7 +85,6 @@ const Multiprotocols multiProtocols {
   { MM_RF_PROTO_Q2X2,       STR_SUBTYPE_Q2X2,     2,  nullptr             },
   { MM_RF_PROTO_WK_2X01,    STR_SUBTYPE_WK2x01,   5,  nullptr             },
   { MM_RF_PROTO_Q303,       STR_SUBTYPE_Q303,     3,  nullptr             },
-  { MM_RF_PROTO_GW08,       NO_SUBTYPE,           0,   nullptr             },
   { MM_RF_CUSTOM_SELECTED,  STR_SUBTYPE_CUSTOM,   7,  STR_MULTI_OPTION    },
 
   //Sential and default for protocols not listed above (MM_RF_CUSTOM is 0xff()

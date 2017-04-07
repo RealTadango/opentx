@@ -96,6 +96,7 @@ class MainWindow : public QMainWindow
     void saveAs();
     void cut();
     void openRecentFile();
+    void loadProfileId(const unsigned pid);
     void loadProfile();
     void logFile();
     void copy();
@@ -123,6 +124,9 @@ class MainWindow : public QMainWindow
     void fwPrefs();
     void updateMenus();
     void createProfile();
+    void copyProfile();
+    void deleteProfile(const int pid);
+    void deleteCurrentProfile();
     void setActiveSubWindow(QWidget *window);
     void autoClose();
 
@@ -148,6 +152,7 @@ class MainWindow : public QMainWindow
     void updateRecentFileActions();
     void updateProfilesActions();
 
+    int newProfile(bool loadProfile = true);
     QString strippedName(const QString & fullFileName);
 
     MdiChild * createMdiChild();
@@ -213,6 +218,8 @@ class MainWindow : public QMainWindow
     QAction *recentFileActs[MAX_RECENT];
     QAction *profileActs[MAX_PROFILES];
     QAction *createProfileAct;
+    QAction *copyProfileAct;
+    QAction *deleteProfileAct;
     QAction *openDocURLAct;
 };
 

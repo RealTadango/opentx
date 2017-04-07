@@ -25,6 +25,7 @@
 
 #include <QDockWidget>
 #include <QMainWindow>
+#include <QThread>
 
 class DebugOutput;
 class RadioData;
@@ -65,6 +66,10 @@ class SimulatorMainWindow : public QMainWindow
     void showRadioFixedHeight(bool fixed);
     void showRadioDocked(bool dock);
 
+  signals:
+    void simulatorStart();
+    void simulatorRestart();
+
   protected slots:
     virtual void closeEvent(QCloseEvent *);
     virtual void changeEvent(QEvent *e);
@@ -73,7 +78,6 @@ class SimulatorMainWindow : public QMainWindow
     void toggleMenuBar(bool show);
     void setRadioSizePolicy(int fixType);
     void toggleRadioDocked(bool dock);
-    void luaReload(bool);
     void openJoystickDialog(bool);
     void showHelp(bool show);
 
@@ -94,6 +98,7 @@ class SimulatorMainWindow : public QMainWindow
     QDockWidget * m_trainerDockWidget;
     QDockWidget * m_outputsDockWidget;
 
+    QThread simuThread;
     QVector<keymapHelp_t> m_keymapHelp;
     QString m_simulatorId;
     QString m_exitStatusMsg;
