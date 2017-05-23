@@ -30,7 +30,7 @@
 #include "downloaddialog.h"
 #include "printdialog.h"
 #include "version.h"
-#include "contributorsdialog.h"
+#include "creditsdialog.h"
 #include "releasenotesdialog.h"
 #include "releasenotesfirmwaredialog.h"
 #include "customizesplashdialog.h"
@@ -44,6 +44,7 @@
 #include "process_sync.h"
 #include "radiointerface.h"
 #include "progressdialog.h"
+#include "progresswidget.h"
 #include "storage.h"
 #include "translations.h"
 
@@ -52,22 +53,28 @@
 #include <QFileInfo>
 #include <QDesktopServices>
 
+#define OPENTX_DOWNLOADS_PAGE_URL         "http://www.open-tx.org/downloads"
 #define OPENTX_COMPANION_DOWNLOADS        "http://downloads-22.open-tx.org/companion"
 #define DONATE_STR                        "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=QUZ48K4SEXDP2"
 
 #ifdef __APPLE__
   #define COMPANION_STAMP                 "companion-macosx.stamp"
-  #define COMPANION_INSTALLER             "companion-macosx-%1.dmg"
-#else
+  #define COMPANION_INSTALLER             "macosx/opentx-companion-%1.dmg"
+  #define COMPANION_FILEMASK              tr("Diskimage (*.dmg)")
+  #define COMPANION_INSTALL_QUESTION      tr("Would you like to open the disk image to install the new version?")
+#elif WIN32
   #define COMPANION_STAMP                 "companion-windows.stamp"
-  #define COMPANION_INSTALLER             "companion-windows-%1.exe"
+  #define COMPANION_INSTALLER             "windows/companion-windows-%1.exe"
+  #define COMPANION_FILEMASK              tr("Executable (*.exe)")
+  #define COMPANION_INSTALL_QUESTION      tr("Would you like to launch the installer?")
+#else
+  #define COMPANION_STAMP                 "companion-linux.stamp"
+  #define COMPANION_INSTALLER             ""   // no automatated updates for linux
+  #define COMPANION_FILEMASK              "*.*"
+  #define COMPANION_INSTALL_QUESTION      tr("Would you like to launch the installer?")
 #endif
 
-#ifdef WIN32
-  #define OPENTX_NIGHT_COMPANION_DOWNLOADS  "http://downloads-22.open-tx.org/nightly/companion/windows"
-#else
-  #define OPENTX_NIGHT_COMPANION_DOWNLOADS  "http://downloads-22.open-tx.org/nightly/companion/linux"
-#endif
+#define OPENTX_NIGHT_COMPANION_DOWNLOADS  "http://downloads-22.open-tx.org/nightlies/companion"
 
 MainWindow::MainWindow():
   downloadDialog_forWait(NULL),
@@ -108,7 +115,16 @@ MainWindow::MainWindow():
   if (showSplash) {
     updateDelay += (SPLASH_TIME*1000);
   }
-  QTimer::singleShot(updateDelay, this, SLOT(doAutoUpdates()));
+
+  if (g.isFirstUse()) {
+    g.warningId(g.warningId() | AppMessages::MSG_WELCOME);
+    QTimer::singleShot(updateDelay-500, this, SLOT(appPrefs()));  // must be shown before warnings dialog but after splash
+  }
+  else {
+    if (!g.previousVersion().isEmpty())
+      g.warningId(g.warningId() | AppMessages::MSG_UPGRADED);
+    QTimer::singleShot(updateDelay, this, SLOT(doAutoUpdates()));
+  }
   QTimer::singleShot(updateDelay, this, SLOT(displayWarnings()));
 
   QStringList strl = QApplication::arguments();
@@ -161,21 +177,39 @@ MainWindow::~MainWindow()
 
 void MainWindow::displayWarnings()
 {
-  int warnId = g.warningId();
-  if (warnId<WARNING_ID && warnId!=0) {
-    int res=0;
-    if (WARNING_LEVEL>0)
-      QMessageBox::warning(this, "Companion", WARNING);
-    else
-      QMessageBox::about(this, "Companion", WARNING);
-    res = QMessageBox::question(this, "Companion", tr("Display previous warning again at startup ?"), QMessageBox::Yes | QMessageBox::No);
-    if (res == QMessageBox::No) {
-      g.warningId(WARNING_ID);
-    }
+  using namespace AppMessages;
+  static uint shownMsgs = 0;
+  int showMsgs = g.warningId();
+  int msgId;
+  QString infoTxt;
+
+  if ((showMsgs & MSG_WELCOME) && !(shownMsgs & MSG_WELCOME)) {
+    infoTxt = CPN_STR_MSG_WELCOME.arg(VERSION);
+    msgId = MSG_WELCOME;
   }
-  else if (warnId==0) {
-    g.warningId(WARNING_ID);
+  else if ((showMsgs & MSG_UPGRADED) && !(shownMsgs & MSG_UPGRADED)) {
+    infoTxt = CPN_STR_MSG_UPGRADED.arg(VERSION);
+    msgId = MSG_UPGRADED;
   }
+  else {
+    return;
+  }
+
+  QMessageBox msgBox(this);
+  msgBox.setWindowTitle(tr("Companion"));
+  msgBox.setIcon(QMessageBox::Information);
+  msgBox.setStandardButtons(QMessageBox::Ok);
+  msgBox.setInformativeText(infoTxt);
+  QCheckBox * cb = new QCheckBox(tr("Show this message again at next startup?"), &msgBox);
+  msgBox.setCheckBox(cb);
+
+  msgBox.exec();
+
+  shownMsgs |= msgId;
+  if (!cb->isChecked())
+    g.warningId(showMsgs & ~msgId);
+
+  displayWarnings();  // in case more warnings need showing
 }
 
 void MainWindow::doAutoUpdates()
@@ -288,20 +322,20 @@ void MainWindow::checkForCompanionUpdateFinished(QNetworkReply * reply)
   if (version.isNull())
     return onUpdatesError();
 
-  int vnum = version2index(version);
+  int webVersion = version2index(version);
 
-  QString c9xversion = QString(VERSION);
-  int c9xver = version2index(c9xversion);
+  int ownVersion = version2index(VERSION);
 
-  if (c9xver < vnum) {
-#if defined WIN32 || !defined __GNUC__ // || defined __APPLE__  // OSX should only notify of updates since no update packages are available.
+  if (ownVersion < webVersion) {
+#if defined WIN32 || defined __APPLE__
     int ret = QMessageBox::question(this, "Companion", tr("A new version of Companion is available (version %1)<br>"
                                                         "Would you like to download it?").arg(version) ,
                                     QMessageBox::Yes | QMessageBox::No);
 
     if (ret == QMessageBox::Yes) {
       QDir dir(g.updatesDir());
-      QString fileName = QFileDialog::getSaveFileName(this, tr("Save As"), dir.absoluteFilePath(QString(COMPANION_INSTALLER).arg(version)), tr("Executable (*.exe)"));
+      QString fileName = QFileDialog::getSaveFileName(this, tr("Save As"), dir.absoluteFilePath(QString(COMPANION_INSTALLER).arg(version)), COMPANION_FILEMASK);
+
       if (!fileName.isEmpty()) {
         g.updatesDir(QFileInfo(fileName).dir().absolutePath());
         downloadDialog * dd = new downloadDialog(this, QString("%1/%2").arg(getCompanionUpdateBaseUrl()).arg(QString(COMPANION_INSTALLER).arg(version)), fileName);
@@ -311,7 +345,7 @@ void MainWindow::checkForCompanionUpdateFinished(QNetworkReply * reply)
       }
     }
 #else
-    QMessageBox::warning(this, tr("New release available"), tr("A new release of Companion is available, please check the OpenTX website!"));
+    QMessageBox::warning(this, tr("New release available"), tr("A new release of Companion is available, please check the <a href='%1'>OpenTX website!</a>").arg(OPENTX_DOWNLOADS_PAGE_URL));
 #endif
   }
   else {
@@ -325,8 +359,7 @@ void MainWindow::checkForCompanionUpdateFinished(QNetworkReply * reply)
 
 void MainWindow::updateDownloaded()
 {
-  int ret = QMessageBox::question(this, "Companion", tr("Would you like to launch the installer?") ,
-                                   QMessageBox::Yes | QMessageBox::No);
+  int ret = QMessageBox::question(this, "Companion", COMPANION_INSTALL_QUESTION, QMessageBox::Yes | QMessageBox::No);
   if (ret == QMessageBox::Yes) {
     if (QDesktopServices::openUrl(QUrl::fromLocalFile(installer_fileName)))
       QApplication::exit();
@@ -657,9 +690,7 @@ void MainWindow::openFile(const QString & fileName, bool updateLastUsedDir)
 
 void MainWindow::openFile()
 {
-  QString fileFilter;
-  fileFilter = tr(EEPROM_FILES_FILTER);
-  QString fileName = QFileDialog::getOpenFileName(this, tr("Open Models and Settings file"), g.eepromDir(), fileFilter);
+  QString fileName = QFileDialog::getOpenFileName(this, tr("Open Models and Settings file"), g.eepromDir(), EEPROM_FILES_FILTER);
   openFile(fileName);
 }
 
@@ -732,29 +763,259 @@ void MainWindow::fwPrefs()
 
 void MainWindow::contributors()
 {
-  ContributorsDialog * dialog = new ContributorsDialog(this);
+  CreditsDialog * dialog = new CreditsDialog(this);
   dialog->exec();
   dialog->deleteLater();
 }
 
+// Create a widget with a line edit and folder select button and handles all interactions. Features autosuggest
+//   path hints while typing, invalid paths shown in red. The label string is only for dialog title, not a QLabel.
+// This should probably be moved some place more reusable, esp. the QFileSystemModel.
+QWidget * folderSelectorWidget(QString * path, const QString & label, QWidget * parent)
+{
+  static QFileSystemModel fileModel;
+  static bool init = false;
+  if (!init) {
+    init = true;
+    fileModel.setFilter(QDir::Dirs);
+    fileModel.setRootPath("/");
+  }
+
+  QWidget * fsw = new QWidget(parent);
+  QLineEdit * le = new QLineEdit(parent);
+  QCompleter * fsc = new QCompleter(fsw);
+  fsc->setModel(&fileModel);
+  //fsc->setCompletionMode(QCompleter::InlineCompletion);
+  le->setCompleter(fsc);
+
+  QToolButton * btn = new QToolButton(fsw);
+  btn->setIcon(CompanionIcon("open.png"));
+  QHBoxLayout * l = new QHBoxLayout(fsw);
+  l->setContentsMargins(0,0,0,0);
+  l->setSpacing(3);
+  l->addWidget(le);
+  l->addWidget(btn);
+
+  QObject::connect(btn, &QToolButton::clicked, [=]() {
+    QString dir = QFileDialog::getExistingDirectory(parent, label, le->text(), 0);
+    if (!dir.isEmpty()) {
+      le->setText(QDir::toNativeSeparators(dir));
+      le->setFocus();
+    }
+  });
+
+  QObject::connect(le, &QLineEdit::textChanged, [=](const QString & text) {
+    *path = text;
+    if (QFile::exists(text))
+      le->setStyleSheet("");
+    else
+      le->setStyleSheet("QLineEdit {color: red;}");
+  });
+  le->setText(QDir::toNativeSeparators(*path));
+
+  return fsw;
+}
+
 void MainWindow::sdsync()
 {
-  QString sdPath = g.profile[g.id()].sdPath();
-  if (sdPath.isEmpty()) {
-    QMessageBox::warning(this, QObject::tr("Synchronization error"), QObject::tr("No SD directory configured!"));
+  const QString dlgTtl = tr("Synchronize SD");
+  const QIcon dlgIcn = CompanionIcon("sdsync.png");
+  const QString srcArw = CPN_STR_SW_INDICATOR_UP % " ";
+  const QString dstArw = CPN_STR_SW_INDICATOR_DN % " ";
+  QStringList errorMsgs;
+
+  // remember user-selectable options for duration of session
+  static QString sourcePath;
+  static QString destPath;
+  static int syncDirection = SyncProcess::SYNC_A2B_B2A;
+  static int compareType = SyncProcess::OVERWR_NEWER_IF_DIFF;
+  static int maxFileSize = 2 * 1024 * 1024;  // Bytes
+  static bool dryRun = false;
+
+  if (sourcePath.isEmpty())
+    sourcePath = g.profile[g.id()].sdPath();
+  if (destPath.isEmpty())
+    destPath = findMassstoragePath("SOUNDS").replace(QRegExp("[/\\\\]?SOUNDS"), "");
+
+  if (sourcePath.isEmpty())
+    errorMsgs << tr("No local SD structure path configured!");
+  if (destPath.isEmpty())
+    errorMsgs << tr("No Radio or SD card detected!");
+
+  QDialog dlg(this);
+  dlg.setWindowTitle(dlgTtl % tr(" :: Options"));
+  dlg.setWindowIcon(dlgIcn);
+  dlg.setSizeGripEnabled(true);
+  dlg.setWindowFlags(dlg.windowFlags() & ~Qt::WindowContextHelpButtonHint);
+
+  QLabel * lblSrc = new QLabel(tr("Local Folder:"), &dlg);
+  QWidget * wdgSrc = folderSelectorWidget(&sourcePath, lblSrc->text(), &dlg);
+
+  QLabel * lblDst = new QLabel(tr("Radio Folder:"), &dlg);
+  QWidget * wdgDst = folderSelectorWidget(&destPath, lblDst->text(), &dlg);
+
+  QLabel * lbDir = new QLabel(tr("Sync. Direction:"), &dlg);
+  QComboBox * syncDir = new QComboBox(&dlg);
+  syncDir->addItem(tr("%1%2 Both directions, to radio folder first").arg(dstArw, srcArw), SyncProcess::SYNC_A2B_B2A);
+  syncDir->addItem(tr("%1%2 Both directions, to local folder first").arg(srcArw, dstArw), SyncProcess::SYNC_B2A_A2B);
+  syncDir->addItem(tr(" %1  Only from local folder to radio folder").arg(dstArw), SyncProcess::SYNC_A2B);
+  syncDir->addItem(tr(" %1  Only from radio folder to local folder").arg(srcArw), SyncProcess::SYNC_B2A);
+  syncDir->setCurrentIndex(-1);  // we set the default option later
+
+  QLabel * lbMode = new QLabel(tr("Existing Files:"), &dlg);
+  QComboBox * copyMode = new QComboBox(&dlg);
+  copyMode->setToolTip(tr("How to handle overwriting files which already exist in the destination folder."));
+  copyMode->addItem(tr("Copy only if newer and different (compare contents)"), SyncProcess::OVERWR_NEWER_IF_DIFF);
+  copyMode->addItem(tr("Copy only if newer (do not compare contents)"), SyncProcess::OVERWR_NEWER_ALWAYS);
+  copyMode->addItem(tr("Copy only if different (ignore file time stamps)"), SyncProcess::OVERWR_IF_DIFF);
+  copyMode->addItem(tr("Always copy (force overwite existing files)"), SyncProcess::OVERWR_ALWAYS);
+
+  QLabel * lbSize = new QLabel(tr("Max. File Size:"), &dlg);
+  QSpinBox * maxSize = new QSpinBox(&dlg);
+  maxSize->setRange(0, 100 * 1024);
+  maxSize->setAccelerated(true);
+  maxSize->setSpecialValueText(tr("Any size"));
+  maxSize->setToolTip(tr("Skip files larger than this size. Enter zero for unlimited."));
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 3, 0))
+  maxSize->setGroupSeparatorShown(true);
+#endif
+
+  QCheckBox * testRun = new QCheckBox(tr("Test-run only"), &dlg);
+  testRun->setToolTip(tr("Run as normal but do not actually copy anything. Useful for verifying results before real sync."));
+  connect(testRun, &QCheckBox::toggled, [=](bool on) { dryRun = on; });
+
+  // layout to hold size spinbox and checkbox option(s)
+  QHBoxLayout * hlay1 = new QHBoxLayout();
+  hlay1->addWidget(maxSize, 1);
+  hlay1->addWidget(testRun);
+
+  // dialog OK/Cancel buttons
+  QDialogButtonBox * bb = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+
+  // Create main layout and add everything
+  QGridLayout * dlgL = new QGridLayout(&dlg);
+  dlgL->setSizeConstraint(QLayout::SetFixedSize);
+  int row = 0;
+  if (errorMsgs.size()) {
+    QLabel * lblWarn = new QLabel(QString(errorMsgs.join('\n')), &dlg);
+    lblWarn->setStyleSheet("QLabel { color: red; }");
+    dlgL->addWidget(lblWarn, row++, 0, 1, 2);
+  }
+  dlgL->addWidget(lblSrc, row, 0);
+  dlgL->addWidget(wdgSrc, row++, 1);
+  dlgL->addWidget(lblDst, row, 0);
+  dlgL->addWidget(wdgDst, row++, 1);
+  dlgL->addWidget(lbDir, row, 0);
+  dlgL->addWidget(syncDir, row++, 1);
+  dlgL->addWidget(lbMode, row, 0);
+  dlgL->addWidget(copyMode, row++, 1);
+  dlgL->addWidget(lbSize, row, 0);
+  dlgL->addLayout(hlay1, row++, 1);
+  dlgL->addWidget(bb, row++, 0, 1, 2);
+  dlgL->setRowStretch(row, 1);
+
+  connect(copyMode, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [=](int) {
+    compareType = copyMode->currentData().toInt();
+  });
+
+  // function to dis/enable the OVERWR_ALWAYS option depending on sync direction
+  connect(syncDir, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [=](int) {
+    int dir = syncDir->currentData().toInt();
+    int idx = copyMode->findData(SyncProcess::OVERWR_ALWAYS);
+    int flg = (dir == SyncProcess::SYNC_A2B || dir == SyncProcess::SYNC_B2A) ? 33 : 0;
+    if (!flg && idx == copyMode->currentIndex())
+      copyMode->setCurrentIndex(copyMode->findData(SyncProcess::OVERWR_NEWER_IF_DIFF));
+    copyMode->setItemData(idx, flg, Qt::UserRole - 1);
+    syncDirection = dir;
+  });
+
+  // function to set magnitude of file size spinbox, KB or MB
+  connect(maxSize, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=](int value) {
+    int multi = maxSize->property("multi").isValid() ? maxSize->property("multi").toInt() : 0;
+    maxSize->blockSignals(true);
+    if (value >= 10 * 1024 && multi != 1024 * 1024) {
+      // KB -> MB
+      multi = 1024 * 1024;
+      maxSize->setValue(value / 1024);
+      maxSize->setMaximum(100);
+      maxSize->setSingleStep(1);
+      maxSize->setSuffix(tr(" MB"));
+    }
+    else if ((value < 10 && multi != 1024) || !multi) {
+      // MB -> KB
+      if (multi)
+        value *= 1024;
+      multi = 1024;
+      if (value == 9 * 1024)
+        value += 1024 - 32;  // avoid large jump when stepping from 10MB to 10,208KB
+      maxSize->setMaximum(100 * 1024);
+      maxSize->setValue(value);
+      maxSize->setSingleStep(32);
+      maxSize->setSuffix(tr(" KB"));
+    }
+    maxSize->setProperty("multi", multi);
+    maxSize->blockSignals(false);
+    maxFileSize = value * multi;
+  });
+
+  copyMode->setCurrentIndex(copyMode->findData(compareType));
+  syncDir->setCurrentIndex(syncDir->findData(syncDirection));
+  maxSize->setValue(maxFileSize / 1024);
+  testRun->setChecked(dryRun);
+
+  connect(bb, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+  connect(bb, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+  // to restart dialog on error/etc
+  openDialog:
+
+  // show the modal options dialog
+  if (dlg.exec() == QDialog::Rejected)
     return;
+
+  // validate
+  errorMsgs.clear();
+  if (sourcePath == destPath)
+    errorMsgs << tr("Source and destination folders are the same!");
+  if (sourcePath.isEmpty() || !QFile::exists(sourcePath))
+    errorMsgs << tr("Source folder not found: %1").arg(sourcePath);
+  if (destPath.isEmpty() || !QFile::exists(destPath))
+    errorMsgs << tr("Destination folder not found: %1").arg(destPath);
+
+  if (!errorMsgs.isEmpty()) {
+    QMessageBox::warning(this, dlgTtl % tr(" :: Error"), errorMsgs.join('\n'));
+    goto openDialog;
   }
-  QString massstoragePath = findMassstoragePath("SOUNDS");
-  if (massstoragePath.isEmpty()) {
-    QMessageBox::warning(this, QObject::tr("Synchronization error"), QObject::tr("No Radio connected!"));
-    return;
-  }
-  massstoragePath = massstoragePath.left(massstoragePath.length() - 7);
-  ProgressDialog progressDialog(this, tr("Synchronize SD"), CompanionIcon("sdsync.png"));
-  SyncProcess syncProcess(massstoragePath, g.profile[g.id()].sdPath(), progressDialog.progress());
-  if (!syncProcess.run()) {
-    progressDialog.exec();
-  }
+
+  // set up the progress dialog and the sync process worker
+  ProgressDialog * progressDlg = new ProgressDialog(this, dlgTtl % tr(" :: Progress"), dlgIcn);
+  progressDlg->setAttribute(Qt::WA_DeleteOnClose, true);
+  ProgressWidget * progWidget = progressDlg->progress();
+  SyncProcess * syncProcess = new SyncProcess(sourcePath, destPath, syncDirection, compareType, maxFileSize, dryRun);
+
+  // move sync process to separate thread, we only use signals/slots from here on...
+  QThread * syncThread = new QThread(this);
+  syncProcess->moveToThread(syncThread);
+
+  // ...and quite a few of them!
+  connect(this,        &MainWindow::startSync,         syncProcess, &SyncProcess::run);
+  connect(syncThread,  &QThread::finished,             syncProcess, &SyncProcess::deleteLater);
+  connect(syncProcess, &SyncProcess::finished,         syncThread,  &QThread::quit);
+  connect(syncProcess, &SyncProcess::destroyed,        syncThread,  &QThread::quit);
+  connect(syncProcess, &SyncProcess::destroyed,        syncThread,  &QThread::deleteLater);
+  connect(syncProcess, &SyncProcess::fileCountChanged, progWidget,  &ProgressWidget::setMaximum);
+  connect(syncProcess, &SyncProcess::progressStep,     progWidget,  &ProgressWidget::setValue);
+  connect(syncProcess, &SyncProcess::progressMessage,  progWidget,  &ProgressWidget::addMessage);
+  connect(syncProcess, &SyncProcess::statusMessage,    progWidget,  &ProgressWidget::setInfo);
+  connect(syncProcess, &SyncProcess::started,          progressDlg, &ProgressDialog::setProcessStarted);
+  connect(syncProcess, &SyncProcess::finished,         progressDlg, &ProgressDialog::setProcessStopped);
+  connect(syncProcess, &SyncProcess::finished,         [=]()        { QApplication::alert(this); });
+  connect(progressDlg, &ProgressDialog::rejected,      syncProcess, &SyncProcess::stop);
+  connect(progressDlg, &ProgressDialog::rejected,      syncProcess, &SyncProcess::deleteLater);
+
+  // go (finally)
+  syncThread->start();
+  emit startSync();
 }
 
 void MainWindow::changelog()
@@ -861,7 +1122,7 @@ void MainWindow::readBackup()
     return;
     // TODO implementation
   }
-  QString fileName = QFileDialog::getSaveFileName(this, tr("Save Radio Backup to File"), g.eepromDir(), tr(EXTERNAL_EEPROM_FILES_FILTER));
+  QString fileName = QFileDialog::getSaveFileName(this, tr("Save Radio Backup to File"), g.eepromDir(), EXTERNAL_EEPROM_FILES_FILTER);
   if (!fileName.isEmpty()) {
     if (!readEepromFromRadio(fileName))
       return;
@@ -870,7 +1131,7 @@ void MainWindow::readBackup()
 
 void MainWindow::readFlash()
 {
-  QString fileName = QFileDialog::getSaveFileName(this,tr("Read Radio Firmware to File"), g.flashDir(),tr(FLASH_FILES_FILTER));
+  QString fileName = QFileDialog::getSaveFileName(this,tr("Read Radio Firmware to File"), g.flashDir(), FLASH_FILES_FILTER);
   if (!fileName.isEmpty()) {
     readFirmwareFromRadio(fileName);
   }

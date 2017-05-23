@@ -22,6 +22,7 @@
 #include "modelprinter.h"
 #include "multiprotocols.h"
 
+#include <QApplication>
 #include <QPainter>
 #include <QFile>
 #include <QUrl>
@@ -76,18 +77,12 @@ QString ModelPrinter::printEEpromSize()
 
 QString ModelPrinter::printChannelName(int idx)
 {
-  return tr("CH%1").arg(idx+1, 2, 10, QChar('0'));
-}
-
-QString ModelPrinter::printOutputName(int idx)
-{
-  QString name = QString(model.limitData[idx].name).trimmed();
-  if (firmware->getCapability(ChannelsName) > 0 && !name.isEmpty()) {
-    return name;
+  QString str = RawSource(SOURCE_TYPE_CH, idx).toString(&model, &generalSettings);
+  if (firmware->getCapability(ChannelsName)) {
+    str = str.leftJustified(firmware->getCapability(ChannelsName) + 5, ' ', false);
   }
-  else {
-    return "";
-  }
+  str.append(' ');
+  return str.toHtmlEscaped();
 }
 
 QString ModelPrinter::printTrimIncrementMode()
@@ -152,7 +147,7 @@ QString ModelPrinter::printMultiSubType(int rfProtocol, bool custom, unsigned in
   Multiprotocols::MultiProtocolDefinition pdef = multiProtocols.getProtocol(rfProtocol);
 
   if (subType < (unsigned int) pdef.subTypeStrings.size())
-    return pdef.subTypeStrings[subType];
+    return qApp->translate("Multiprotocols", qPrintable(pdef.subTypeStrings[subType]));
   else
     return "???";
 }
@@ -333,20 +328,8 @@ QString ModelPrinter::printRotaryEncoder(int flightModeIndex, int reIndex)
 
 QString ModelPrinter::printInputName(int idx)
 {
-  QString result;
-  if (firmware->getCapability(VirtualInputs)) {
-    if (strlen(model.inputNames[idx]) > 0) {
-      result = tr("[I%1]").arg(idx+1);
-      result += QString(model.inputNames[idx]);
-    }
-    else {
-      result = tr("Input%1").arg(idx+1, 2, 10, QChar('0'));
-    }
-  }
-  else {
-    result = RawSource(SOURCE_TYPE_STICK, idx).toString(&model, &generalSettings);
-  }
-  return result.toHtmlEscaped();
+  RawSourceType srcType = (firmware->getCapability(VirtualInputs) ? SOURCE_TYPE_VIRTUAL_INPUT : SOURCE_TYPE_STICK);
+  return RawSource(srcType, idx).toString(&model, &generalSettings).toHtmlEscaped();
 }
 
 QString ModelPrinter::printInputLine(int idx)
@@ -368,9 +351,9 @@ QString ModelPrinter::printInputLine(const ExpoData & input)
     str += input.srcRaw.toString(&model, &generalSettings).toHtmlEscaped();
   }
 
-  str += " " + tr("Weight").toHtmlEscaped() + QString("(%1)").arg(getGVarString(input.weight,true).toHtmlEscaped());
+  str += " " + tr("Weight").toHtmlEscaped() + QString("(%1)").arg(Helpers::getAdjustmentString(input.weight, &model, true).toHtmlEscaped());
   if (input.curve.value)
-    str += " " + input.curve.toString().toHtmlEscaped();
+    str += " " + input.curve.toString(&model).toHtmlEscaped();
 
   QString flightModesStr = printFlightModes(input.flightModes);
   if (!flightModesStr.isEmpty())
@@ -388,31 +371,12 @@ QString ModelPrinter::printInputLine(const ExpoData & input)
   }
 
   if (input.offset)
-    str += " " + tr("Offset(%1)").arg(getGVarString(input.offset)).toHtmlEscaped();
+    str += " " + tr("Offset(%1)").arg(Helpers::getAdjustmentString(input.offset, &model)).toHtmlEscaped();
 
   if (firmware->getCapability(HasExpoNames) && input.name[0])
     str += QString(" [%1]").arg(input.name).toHtmlEscaped();
 
   return str;
-}
-
-QString ModelPrinter::printMixerName(int curDest)
-{
-  QString str = printChannelName(curDest-1) + " ";
-  if (firmware->getCapability(ChannelsName) > 0) {
-    QString name = model.limitData[curDest-1].name;
-    if (!name.isEmpty()) {
-      name = QString("(") + name + QString(")");
-    }
-    name.append("        ");
-    str += name.left(8);
-  }
-  return str.toHtmlEscaped();
-}
-
-QString ModelPrinter::printMixerLine(int idx, bool showMultiplex, int highlightedSource)
-{
-  return printMixerLine(model.mixData[idx], highlightedSource, showMultiplex);
 }
 
 QString ModelPrinter::printMixerLine(const MixData & mix, bool showMultiplex, int highlightedSource)
@@ -439,7 +403,7 @@ QString ModelPrinter::printMixerLine(const MixData & mix, bool showMultiplex, in
   if (mix.mltpx == MLTPX_MUL && !showMultiplex)
     str += " " + QString("MULT!").toHtmlEscaped();
   else
-    str += " " + tr("Weight(%1)").arg(getGVarString(mix.weight, true)).toHtmlEscaped();
+    str += " " + tr("Weight(%1)").arg(Helpers::getAdjustmentString(mix.weight, &model, true)).toHtmlEscaped();
 
   QString flightModesStr = printFlightModes(mix.flightModes);
   if (!flightModesStr.isEmpty())
@@ -456,9 +420,9 @@ QString ModelPrinter::printMixerLine(const MixData & mix, bool showMultiplex, in
   if (firmware->getCapability(HasNoExpo) && mix.noExpo)
     str += " " + tr("No DR/Expo").toHtmlEscaped();
   if (mix.sOffset)
-    str += " " + tr("Offset(%1)").arg(getGVarString(mix.sOffset)).toHtmlEscaped();
+    str += " " + tr("Offset(%1)").arg(Helpers::getAdjustmentString(mix.sOffset, &model)).toHtmlEscaped();
   if (mix.curve.value)
-    str += " " + mix.curve.toString().toHtmlEscaped();
+    str += " " + mix.curve.toString(&model).toHtmlEscaped();
   int scale = firmware->getCapability(SlowScale);
   if (scale == 0)
     scale = 1;
@@ -519,7 +483,7 @@ QString ModelPrinter::printLogicalSwitchLine(int idx)
   const QString sw1Name = RawSwitch(ls.val1).toString(getCurrentBoard(), &generalSettings);
   const QString sw2Name = RawSwitch(ls.val2).toString(getCurrentBoard(), &generalSettings);
 
-  if (!ls.func)
+  if (ls.isEmpty())
     return result;
 
   if (ls.andsw!=0) {
@@ -642,13 +606,18 @@ QString ModelPrinter::printCustomFunctionLine(int idx)
     return result;
 
   result += cf.swtch.toString(getCurrentBoard(), &generalSettings) + " - ";
-  result += cf.funcToString() + "(";
+  result += cf.funcToString(&model) + " (";
   result += cf.paramToString(&model) + ")";
   if (!cf.repeatToString().isEmpty())
     result += " " + cf.repeatToString();
   if (!cf.enabledToString().isEmpty())
     result += " " + cf.enabledToString();
   return result;
+}
+
+QString ModelPrinter::printCurveName(int idx)
+{
+  return model.curves[idx].nameToString(idx).toHtmlEscaped();
 }
 
 QString ModelPrinter::printCurve(int idx)

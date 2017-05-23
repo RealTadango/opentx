@@ -250,7 +250,7 @@ unsigned long OpenTxEepromInterface::load(RadioData &radioData, const uint8_t * 
     radioData.models.resize(firmware->getCapability(Models));
   }
   for (int i = 0; i < firmware->getCapability(Models); i++) {
-    if (!loadModelFromRLE(radioData.models[i], efile, i, version, radioData.generalSettings.variant)) {
+    if (i < (int)radioData.models.size() && !loadModelFromRLE(radioData.models[i], efile, i, version, radioData.generalSettings.variant)) {
       std::cout << " ko\n";
       errors.set(UNKNOWN_ERROR);
       if (getCurrentFirmware()->getCapability(Models) == 0) {
@@ -489,11 +489,6 @@ int OpenTxFirmware::getCapability(::Capability capability)
         return 0;
     case PermTimers:
       return (IS_2560(board) || IS_ARM(board));
-    case SwitchesPositions:
-      if (IS_HORUS_OR_TARANIS(board))
-        return getBoardCapability(board, Board::Switches) * 3;
-      else
-        return 9;
     case CustomFunctions:
       if (IS_ARM(board))
         return 64;
