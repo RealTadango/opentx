@@ -460,16 +460,6 @@ QString AppData::libDir()          { return _libDir;          }
 QString AppData::snapshotDir()     { return _snapshotDir;     }
 QString AppData::updatesDir()      { return _updatesDir;      }
 
-bool AppData::jsSupport()          { return _jsSupport;       }
-bool AppData::maximized()          { return _maximized;       }
-bool AppData::showSplash()         { return _showSplash;      }
-bool AppData::snapToClpbrd()       { return _snapToClpbrd;    }
-bool AppData::autoCheckApp()       { return _autoCheckApp;    }
-bool AppData::autoCheckFw()        { return _autoCheckFw;     }
-bool AppData::simuSW()             { return _simuSW;          }
-bool AppData::tabbedMdi()          { return _tabbedMdi;       }
-bool AppData::removeModelSlots()   { return _remvModelSlots;  }
-
 int AppData::newModelAction()      { return _newModelAction;  }
 int AppData::backLight()           { return _backLight;       }
 int AppData::embedSplashes()       { return _embedSplashes;   }
@@ -517,16 +507,6 @@ void AppData::libDir          (const QString     x) { store(x, _libDir,         
 void AppData::snapshotDir     (const QString     x) { store(x, _snapshotDir,     "snapshotpath"            );}
 void AppData::updatesDir      (const QString     x) { store(x, _updatesDir,      "lastUpdatesDir"          );}
 
-void AppData::maximized       (const bool        x) { store(x, _maximized,       "maximized"               );}
-void AppData::jsSupport       (const bool        x) { store(x, _jsSupport,       "js_support"              );}
-void AppData::showSplash      (const bool        x) { store(x, _showSplash,      "show_splash"             );}
-void AppData::snapToClpbrd    (const bool        x) { store(x, _snapToClpbrd,    "snapshot_to_clipboard"   );}
-void AppData::autoCheckApp    (const bool        x) { store(x, _autoCheckApp,    "startup_check_companion" );}
-void AppData::autoCheckFw     (const bool        x) { store(x, _autoCheckFw,     "startup_check_fw"        );}
-void AppData::simuSW          (const bool        x) { store(x, _simuSW,          "simuSW"                  );}
-void AppData::tabbedMdi       (const bool        x) { store(x, _tabbedMdi,       "tabbedMdi"               );}
-void AppData::removeModelSlots(const bool        x) { store(x, _remvModelSlots,  "removeModelSlots"        );}
-
 void AppData::newModelAction  (const int         x) { store(x, _newModelAction,  "newModelAction"          );}
 void AppData::backLight       (const int         x) { store(x, _backLight,       "backLight"               );}
 void AppData::embedSplashes   (const int         x) { store(x, _embedSplashes,   "embedded_splashes"       );}
@@ -558,12 +538,10 @@ void AppData::init()
     qRegisterMetaTypeStreamOperators<SimulatorOptions>("SimulatorOptions");
 
     firstUse = false;
-    upgradeFromVersion = "";
 
     QSettings settings(COMPANY, PRODUCT);
     if (!settings.contains("settings_version")) {
-      if (!importSettings(settings))
-        firstUse = true;
+      firstUse = true;
     }
     convertSettings(settings);
 
@@ -610,24 +588,26 @@ void AppData::init()
     getset( _libDir,          "libraryPath"             ,"" );
     getset( _snapshotDir,     "snapshotpath"            ,"" );
     getset( _updatesDir,      "lastUpdatesDir"          ,"" );
+    appLogsDir_init();
 
-    getset( _enableBackup,    "enableBackup"            ,false );
-    getset( _backupOnFlash,   "backupOnFlash"           ,true  );
-
-    getset( _outputDisplayDetails,       "outputDisplayDetails"       ,false );
-    getset( _checkHardwareCompatibility, "checkHardwareCompatibility" ,true  );
-    getset( _useCompanionNightlyBuilds,  "useCompanionNightlyBuilds"  ,false );
-    getset( _useFirmwareNightlyBuilds,   "useFirmwareNightlyBuilds"   ,false );
-
-    getset( _jsSupport,       "js_support"              ,false );
-    getset( _maximized,       "maximized"               ,false );
-    getset( _showSplash,      "show_splash"             ,true  );
-    getset( _snapToClpbrd,    "snapshot_to_clipboard"   ,false );
-    getset( _autoCheckApp,    "startup_check_companion" ,true  );
-    getset( _autoCheckFw,     "startup_check_fw"        ,true  );
-    getset( _simuSW,          "simuSW"                  ,false );
-    getset( _tabbedMdi,       "tabbedMdi"               ,false );
-    getset( _remvModelSlots,  "removeModelSlots"        ,true  );
+    // booleans
+    enableBackup_init();
+    backupOnFlash_init();
+    outputDisplayDetails_init();
+    checkHardwareCompatibility_init();
+    useCompanionNightlyBuilds_init();
+    useFirmwareNightlyBuilds_init();
+    removeModelSlots_init();
+    maximized_init();
+    simuSW_init();
+    tabbedMdi_init();
+    appDebugLog_init();
+    fwTraceLog_init();
+    jsSupport_init();
+    showSplash_init();
+    snapToClpbrd_init();
+    autoCheckApp_init();
+    autoCheckFw_init();
 
     getset( _newModelAction,  "newModelAction"          ,1  );
     getset( _backLight,       "backLight"               ,0  );
@@ -670,54 +650,84 @@ void AppData::convertSettings(QSettings & settings)
   }
 }
 
-bool AppData::importSettings(QSettings & toSettings)
+bool AppData::hasCurrentSettings()
+{
+  QSettings settings(COMPANY, PRODUCT);
+  if (!settings.contains("settings_version")) {
+    return false;
+  }
+  return true;
+}
+
+bool AppData::findPreviousVersionSettings(QString * version)
 {
   QSettings * fromSettings = NULL;
+  *version = "";
 
   QSettings settings21("OpenTX", "Companion 2.1");
   if (settings21.contains("settings_version")) {
     fromSettings = &settings21;
-    upgradeFromVersion = "2.1";
+    *version = "2.1";
   }
   else {
     settings21.clear();
   }
 
-  if (!fromSettings) {
-    QSettings settings20("OpenTX", "Companion 2.0");
-    if (settings20.contains("settings_version")) {
+  QSettings settings20("OpenTX", "Companion 2.0");
+  if (settings20.contains("settings_version")) {
+    if (!fromSettings) {
       fromSettings = &settings20;
-      upgradeFromVersion = "2.0";
-    }
-    else {
-      settings20.clear();
+      *version = "2.0";
     }
   }
+  else {
+    settings20.clear();
+  }
 
-  if (!fromSettings) {
-    QSettings settings16("OpenTX", "OpenTX Companion");
-    if (settings16.contains("settings_version")) {
+  QSettings settings16("OpenTX", "OpenTX Companion");
+  if (settings16.contains("settings_version")) {
+    if (!fromSettings) {
       fromSettings = &settings16;
-      upgradeFromVersion = "1.x";
-    }
-    else {
-      settings16.clear();
+      *version = "1.x";
     }
   }
-
-  if (!fromSettings) {
-    QSettings settings9x("companion9x", "companion9x");
-    if (settings9x.contains("default_mode")) {
-      fromSettings = &settings9x;
-      upgradeFromVersion = "Companion9X";
-    }
-    else {
-      settings9x.clear();
-    }
+  else {
+    settings16.clear();
   }
 
   if (!fromSettings)
     return false;
+
+  return true;  
+}
+
+bool AppData::importSettings(QString fromVersion)
+{
+  QSettings toSettings(COMPANY, PRODUCT);
+
+  QString fromCompany;
+  QString fromProduct;
+  
+  upgradeFromVersion = "";
+
+  if (fromVersion == "2.1") {
+    fromCompany = "OpenTX";
+    fromProduct = "Companion 2.1";
+  }
+  else if (fromVersion == "2.0") {
+    fromCompany = "OpenTX";
+    fromProduct = "Companion 2.0";
+  }
+  else if (fromVersion == "1.x") {
+    fromCompany = "OpenTX";
+    fromProduct = "OpenTX Companion";
+  }
+  else
+    return false;
+    
+  upgradeFromVersion = fromVersion;
+
+  QSettings fromSettings(fromCompany, fromProduct);
 
   // do not copy these settings
   QStringList excludeKeys = QStringList() << "compilation-server";
@@ -729,58 +739,10 @@ bool AppData::importSettings(QSettings & toSettings)
 #endif
 
   // import settings
-  foreach (const QString & key, fromSettings->allKeys()) {
-    if (fromSettings->value(key).isValid() && !excludeKeys.contains(key)) {
-      toSettings.setValue(key, fromSettings->value(key));
+  foreach (const QString & key, fromSettings.allKeys()) {
+    if (fromSettings.value(key).isValid() && !excludeKeys.contains(key)) {
+      toSettings.setValue(key, fromSettings.value(key));
     }
-  }
-
-  // Additional adjustments for companion9x settings
-  if (fromSettings->applicationName() == "companion9x") {
-    // Store old values in new locations
-    autoCheckApp(toSettings.value("startup_check_companion9x", true).toBool());
-    toSettings.setValue("useWizard", toSettings.value("wizardEnable", true));
-
-    // Convert and store the firmware type
-    QString fwType  = toSettings.value("firmware", "").toString();
-    fwType.replace("open9x", "opentx");
-    fwType.replace("x9da", "x9d");
-
-    profile[0].init( 0 );
-    profile[0].fwType( fwType );
-    // Move the Companion9x profile settings to profile0, the new default profile
-    profile[0].name( toSettings.value(          "Name",                  "My Radio").toString());
-    profile[0].sdPath( toSettings.value(        "sdPath",                ""    ).toString());
-    profile[0].splashFile( toSettings.value(    "SplashFileName",        ""    ).toString());
-    profile[0].burnFirmware( toSettings.value(  "burnFirmware",          false ).toBool());
-    profile[0].renameFwFiles( toSettings.value( "rename_firmware_files", false ).toBool());
-    profile[0].channelOrder( toSettings.value(  "default_channel_order", "0"   ).toInt());
-    profile[0].defaultMode( toSettings.value(   "default_mode",          "1"   ).toInt());
-
-    // Ensure that the default profile has a name
-    if ( profile[0].name().isEmpty() )
-      profile[0].name("My Radio");
-
-    // Delete obsolete settings fields from companion9x
-    toSettings.remove("ActiveProfile");
-    toSettings.remove("burnFirmware");
-    toSettings.remove("custom_id");
-    toSettings.remove("default_channel_order");
-    toSettings.remove("default_mode");
-    toSettings.remove("firmware");
-    toSettings.remove("lastFw");
-    toSettings.remove("modelEditTab");
-    toSettings.remove("Name");
-    toSettings.remove("patchImage");
-    toSettings.remove("rename_firmware_files");
-    toSettings.remove("sdPath");
-    toSettings.remove("SplashFileName");
-    toSettings.remove("startup_check_companion9x");
-    toSettings.remove("warningId");
-    toSettings.remove("wizardEnable");
-
-    // Select the new default profile as current profile
-    id( 0 );
   }
 
   return true;

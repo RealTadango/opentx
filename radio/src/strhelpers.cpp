@@ -49,7 +49,7 @@ int8_t char2idx(char c)
 {
   if (c == '_') return 37;
 #if LEN_SPECIAL_CHARS > 0
-  if (c < 0 && c+128 <= LEN_SPECIAL_CHARS) return 41 + (c+128);
+  if ((int8_t)c < 0 && c+128 <= LEN_SPECIAL_CHARS) return 41 + (c+128);
 #endif
   if (c >= 'a') return 'a' - c - 1;
   if (c >= 'A') return c - 'A' + 1;
@@ -379,8 +379,17 @@ char * getSourceString(char * dest, mixsrc_t idx)
   else if (idx <= MIXSRC_LAST_GVAR) {
     strAppendStringWithIndex(dest, STR_GV, idx - MIXSRC_GVAR1 + 1);
   }
-  else if (idx < MIXSRC_FIRST_TELEM) {
+  else if (idx < MIXSRC_FIRST_TIMER) {
     getStringAtIndex(dest, STR_VSRCRAW, idx-MIXSRC_Rud+1-MAX_LOGICAL_SWITCHES-MAX_TRAINER_CHANNELS-MAX_OUTPUT_CHANNELS-MAX_GVARS);
+  }
+  else if (idx <= MIXSRC_LAST_TIMER) {
+    if(ZEXIST(g_model.timers[idx-MIXSRC_FIRST_TIMER].name)) {
+      zchar2str(dest,g_model.timers[idx-MIXSRC_FIRST_TIMER].name, LEN_TIMER_NAME);
+      dest[LEN_TIMER_NAME] = '\0';
+    }
+    else {
+      getStringAtIndex(dest, STR_VSRCRAW, idx-MIXSRC_Rud+1-MAX_LOGICAL_SWITCHES-MAX_TRAINER_CHANNELS-MAX_OUTPUT_CHANNELS-MAX_GVARS);
+    }
   }
   else {
     idx -= MIXSRC_FIRST_TELEM;

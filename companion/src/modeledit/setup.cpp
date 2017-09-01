@@ -22,10 +22,12 @@
 #include "ui_setup.h"
 #include "ui_setup_timer.h"
 #include "ui_setup_module.h"
+#include "switchitemmodel.h"
 #include "helpers.h"
 #include "appdata.h"
 #include "modelprinter.h"
 #include "multiprotocols.h"
+#include "checklistdialog.h"
 
 TimerPanel::TimerPanel(QWidget *parent, ModelData & model, TimerData & timer, GeneralSettings & generalSettings, Firmware * firmware, QWidget * prevFocus):
   ModelPanel(parent, model, generalSettings, firmware),
@@ -49,7 +51,8 @@ TimerPanel::TimerPanel(QWidget *parent, ModelData & model, TimerData & timer, Ge
   }
 
   // Mode
-  ui->mode->setModel(Helpers::getRawSwitchItemModel(&generalSettings, Helpers::TimersContext));
+  rawSwitchItemModel = new RawSwitchFilterItemModel(&generalSettings, &model, TimersContext);
+  ui->mode->setModel(rawSwitchItemModel);
   ui->mode->setCurrentIndex(ui->mode->findData(timer.mode.toValue()));
 
   if (!firmware->getCapability(PermTimers)) {
@@ -90,6 +93,8 @@ TimerPanel::~TimerPanel()
 
 void TimerPanel::update()
 {
+  rawSwitchItemModel->update();
+
   int hour = timer.val / 3600;
   int min = (timer.val - (hour * 3600)) / 60;
   int sec = (timer.val - (hour * 3600)) % 60;
@@ -165,6 +170,7 @@ void TimerPanel::on_name_editingFinished()
 #define MASK_MULTIMODULE    128
 #define MASK_ANTENNA        256
 #define MASK_MULTIOPTION    512
+#define MASK_R9M            1024
 
 quint8 ModulePanel::failsafesValueDisplayType = ModulePanel::FAILSAFE_DISPLAY_PERCENT;
 
@@ -256,7 +262,8 @@ ModulePanel::~ModulePanel()
 
 bool ModulePanel::moduleHasFailsafes()
 {
-  return ((PulsesProtocol)module.protocol == PulsesProtocol::PULSES_PXX_XJT_X16 && firmware->getCapability(HasFailsafe));;
+  return (((PulsesProtocol)module.protocol == PulsesProtocol::PULSES_PXX_XJT_X16 || (PulsesProtocol)module.protocol == PulsesProtocol::PULSES_PXX_R9M)
+         && firmware->getCapability(HasFailsafe));;
 }
 
 void ModulePanel::setupFailsafes()
@@ -360,12 +367,14 @@ void ModulePanel::update()
   if (moduleIdx >= 0) {
     mask |= MASK_PROTOCOL;
     switch (protocol) {
+      case PULSES_PXX_R9M:
+        mask |= MASK_R9M;
       case PULSES_PXX_XJT_X16:
       case PULSES_PXX_XJT_D8:
       case PULSES_PXX_XJT_LR12:
       case PULSES_PXX_DJT:
         mask |= MASK_CHANNELS_RANGE | MASK_CHANNELS_COUNT;
-        if (protocol==PULSES_PXX_XJT_X16 || protocol==PULSES_PXX_XJT_LR12)
+        if (protocol==PULSES_PXX_XJT_X16 || protocol==PULSES_PXX_XJT_LR12 || protocol==PULSES_PXX_R9M)
           mask |= MASK_RX_NUMBER;
         if (IS_HORUS(firmware->getBoard()) && moduleIdx==0)
           mask |= MASK_ANTENNA;
@@ -450,7 +459,17 @@ void ModulePanel::update()
   // Antenna slection on Horus
   ui->label_antenna->setVisible(mask & MASK_ANTENNA);
   ui->antennaMode->setVisible(mask & MASK_ANTENNA);
-  ui->antennaMode->setCurrentIndex(module.ppm.pulsePol);
+  ui->antennaMode->setCurrentIndex(module.pxx.external_antenna);
+
+  // R9M S.port output
+  ui->sportOut->setVisible(mask & MASK_R9M);
+  ui->label_sportOut->setVisible(mask & MASK_R9M);
+  ui->sportOut->setCurrentIndex(module.pxx.sport_out);
+
+  ui->r9mPower->setVisible(mask & MASK_R9M);
+  ui->label_r9mPower->setVisible(mask & MASK_R9M);
+  ui->r9mPower->setCurrentIndex(module.pxx.power);
+
 
   // Multi settings fields
   ui->label_multiProtocol->setVisible(mask & MASK_MULTIMODULE);
@@ -554,7 +573,19 @@ void ModulePanel::on_ppmPolarity_currentIndexChanged(int index)
 
 void ModulePanel::on_antennaMode_currentIndexChanged(int index)
 {
-  module.ppm.pulsePol = index;
+  module.pxx.external_antenna = index;
+  emit modified();
+}
+
+void ModulePanel::on_sportOut_currentIndexChanged(int index)
+{
+  module.pxx.sport_out = index;
+  emit modified();
+}
+
+void ModulePanel::on_r9mPower_currentIndexChanged(int index)
+{
+  module.pxx.power = index;
   emit modified();
 }
 
@@ -891,6 +922,7 @@ SetupPanel::SetupPanel(QWidget * parent, ModelData & model, GeneralSettings & ge
 
   if (!firmware->getCapability(HasDisplayText)) {
     ui->displayText->hide();
+    ui->editText->hide();
   }
 
   if (!firmware->getCapability(GlobalFunctions)) {
@@ -1134,6 +1166,7 @@ void SetupPanel::update()
   ui->extendedLimits->setChecked(model->extendedLimits);
   ui->extendedTrims->setChecked(model->extendedTrims);
   ui->displayText->setChecked(model->displayChecklist);
+  ui->editText->setEnabled(model->displayChecklist);
   ui->gfEnabled->setChecked(!model->noGlobalFunctions);
 
   updateBeepCenter();
@@ -1279,6 +1312,7 @@ void SetupPanel::on_potWarningMode_currentIndexChanged(int index)
 void SetupPanel::on_displayText_toggled(bool checked)
 {
   model->displayChecklist = checked;
+  ui->editText->setEnabled(checked);
   emit modified();
 }
 
@@ -1305,4 +1339,10 @@ void SetupPanel::onBeepCenterToggled(bool checked)
       model->beepANACenter &= ~mask;
     emit modified();
   }
+}
+
+void SetupPanel::on_editText_clicked()
+{
+  ChecklistDialog *g = new ChecklistDialog(this, ui->name->text());
+  g->exec();
 }

@@ -108,7 +108,7 @@ Return the time since the radio was started in multiple of 10ms
 @retval number Number of 10ms ticks since the radio was started Example:
 run time: 12.54 seconds, return value: 1254
 
-The timer internally uses a 32-bit counter which is enough for 30year so
+The timer internally uses a 32-bit counter which is enough for 30 years so
 overflows will not happen.
 
 @status current Introduced in 2.0.0
@@ -311,7 +311,9 @@ Pops a received SPORT packet from the queue. Please note that only packets using
 (frame ID == 0x10), as well as packets with a frame ID equal 0x32 (regardless of the data ID) will be passed to
 the LUA telemetry receive queue.
 
-@retval SPORT paket as a quadruple:
+@retval nil queue does not contain any (or enough) bytes to form a whole packet
+
+@retval multiple returns 4 values:
  * sensor ID (number)
  * frame ID (number)
  * data ID (number)
@@ -359,7 +361,7 @@ uint8_t getDataId(uint8_t physicalId)
 This functions allows for sending SPORT telemetry data toward the receiver,
 and more generally, to anything connected SPORT bus on the receiver or transmitter.
 
-When called without parameters, it will only return the status of the ouput buffer without sending anything.
+When called without parameters, it will only return the status of the output buffer without sending anything.
 
 @param sensorId  physical sensor ID
 
@@ -396,11 +398,13 @@ static int luaSportTelemetryPush(lua_State * L)
 /*luadoc
 @function crossfireTelemetryPop()
 
-@retval SPORT paket as a quadruple:
- * sensor ID (number)
- * frame ID (number)
- * data ID (number)
- * value (number)
+Pops a received Crossfire Telemetry packet from the queue.
+
+@retval nil queue does not contain any (or enough) bytes to form a whole packet
+
+@retval multiple returns 2 values:
+ * command (number)
+ * packet (table) data bytes
 
 @status current Introduced in 2.2.0
 */
@@ -437,15 +441,11 @@ static int luaCrossfireTelemetryPop(lua_State * L)
 
 This functions allows for sending telemetry data toward the TBS Crossfire link.
 
-When called without parameters, it will only return the status of the ouput buffer without sending anything.
+When called without parameters, it will only return the status of the output buffer without sending anything.
 
-@param sensorId  physical sensor ID
+@param command command
 
-@param frameId   frame ID
-
-@param dataId    data ID
-
-@param value     value
+@param data table of data bytes
 
 @retval boolean  data queued in output buffer or not.
 
@@ -1085,8 +1085,8 @@ Get RSSI value as well as low and critical RSSI alarm levels (in dB)
 static int luaGetRSSI(lua_State * L)
 {
   lua_pushunsigned(L, min((uint8_t)99, TELEMETRY_RSSI()));
-  lua_pushunsigned(L, getRssiAlarmValue(0));
-  lua_pushunsigned(L, getRssiAlarmValue(1));
+  lua_pushunsigned(L, g_model.rssiAlarms.getWarningRssi());
+  lua_pushunsigned(L, g_model.rssiAlarms.getCriticalRssi());
   return 3;
 }
 
@@ -1238,6 +1238,7 @@ const luaR_value_entry opentxConstants[] = {
   { "MIXSRC_CH1", MIXSRC_CH1 },
   { "SWSRC_LAST", SWSRC_LAST_LOGICAL_SWITCH },
 #if defined(COLORLCD)
+  { "SHADOWED", SHADOWED },
   { "COLOR", ZoneOption::Color },
   { "CUSTOM_COLOR", CUSTOM_COLOR },
   { "TEXT_COLOR", TEXT_COLOR },

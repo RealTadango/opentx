@@ -100,7 +100,7 @@
 #define TR_COUNTRYCODES        TR("US""JP""EU", "Amerika""Japan\0 ""Europa\0")
 
 #define LEN_TARANIS_PROTOCOLS  "\004"
-#define TR_TARANIS_PROTOCOLS   "UIT\0""PPM\0""XJT\0""DSM2""CRSF""MULT"
+#define TR_TARANIS_PROTOCOLS   "UIT\0""PPM\0""XJT\0""DSM2""CRSF""MULT""R9M\0"
 
 #define LEN_TELEMETRY_PROTOCOLS "\017"
 #define TR_TELEMETRY_PROTOCOLS "FrSky S.PORT\0  ""FrSky D\0       ""FrSky D (cable)""TBS Crossfire\0 ""Spektrum\0      ""AFHDS2A IBUS\0  ""Multi Telemetry"
@@ -413,12 +413,16 @@
 #define LEN_GPSFORMAT          "\004"
 #define TR_GPSFORMAT           "DMS\0""NMEA"
 
-#define LEN2_VTEMPLATES        13
-#define LEN_VTEMPLATES         "\015"
-#define TR_VTEMPLATES          "Mix wissen\0\0\0""Simple 4-CH \0""Sticky-T-Cut\0""V-Tail      \0""Elevon\\Delta\0""eCCPM       \0""Heli Setup  \0""Servo Test  \0"
-
-#define LEN_VSWASHTYPE         "\004"
-#define TR_VSWASHTYPE          "---\0""120\0""120X""140\0""90\0"
+#define LEN2_VTEMPLATES        12
+#define LEN_VTEMPLATES         "\014"
+#define TR_TEMPLATE_CLEAR_MIXES        "Mix wissen  "
+#define TR_TEMPLATE_SIMPLE_4CH         "Simple 4-CH "
+#define TR_TEMPLATE_STICKY_TCUT        "Sticky-T-Cut"
+#define TR_TEMPLATE_VTAIL              "V-Tail      "
+#define TR_TEMPLATE_DELTA              "Elevon\\Delta"
+#define TR_TEMPLATE_ECCPM              "eCCPM       "
+#define TR_TEMPLATE_HELI               "Heli Setup  "
+#define TR_TEMPLATE_SERVO_TEST         "Servo Test  "
 
 #if defined(PCBHORUS)
 #define LEN_VKEYS              "\006"
@@ -543,7 +547,8 @@
 #define TR_VTRAINER_SLAVE_JACK         "Slave/Jack\0       "
 #define TR_VTRAINER_MASTER_SBUS_MODULE "Master/SBUS Module"
 #define TR_VTRAINER_MASTER_CPPM_MODULE "Master/CPPM Module"
-#define TR_VTRAINER_MASTER_BATTERY     "Master/Battery\0"
+#define TR_VTRAINER_MASTER_BATTERY     "Master/Battery\0   "
+#define TR_VTRAINER_BLUETOOTH          TR("Master/BT\0        ""Slave/BT\0", "Master/Bluetooth\0 ""Slave/Bluetooth\0  ")
 
 #define LEN_VFAILSAFE          TR("\013","\011")
 #define TR_VFAILSAFE           TR("Niet Gezet\0""Vasthouden\0""Custom\0    ""Geen Pulsen""Ontvanger\0 ","Not Set\0 ""Hold\0    ""Custom\0  ""No Pulses""Receiver\0")
@@ -702,6 +707,9 @@
 #define TR_INACTIVITYALARM     TR(INDENT "Inactiviteit", INDENT "Inactiviteit na") //9XR-Pro
 #define TR_MEMORYWARNING       INDENT "Geheugen laag"
 #define TR_ALARMWARNING        TR(INDENT "Al Geluid uit?", INDENT "Al het geluid uit?")
+#define TR_RSSISHUTDOWNALARM   TR(INDENT "Rssi Shutdown", INDENT "Check Rssi on Shutdown")
+#define TR_MODEL_STILL_POWERED "Model still powered"
+#define TR_PRESS_ENTER_TO_CONFIRM      "Press enter to confirm"
 #define TR_RENAVIG             "Stappenschakelaar"
 #define TR_THROTTLE_LABEL      "----Gas-------------"
 #define TR_THROTTLEREVERSE     TR("Reverse", INDENT "Omgekeerd")
@@ -847,6 +855,7 @@
 #define TR_MULTI_AUTOBIND      TR(INDENT "Autobind",INDENT "Bind on powerup")
 #define TR_MULTI_DSM_AUTODTECT TR(INDENT "Autodetect", INDENT "Autodetect format")
 #define TR_MULTI_LOWPOWER      TR(INDENT "Low power", INDENT "Low power mode")
+#define TR_SPORT_OUT                   INDENT "Telemetry"
 #define TR_DISABLE_INTERNAL         TR("Disable int. RF", "Disable internal RF")
 #define TR_MODULE_NO_SERIAL_MODE       TR("!serial mode", "Not in serial mode")
 #define TR_MODULE_NO_INPUT             TR("No input", "No serial input")
@@ -947,7 +956,12 @@
 #define TR_FORMATTING          "Formatteren..."
 #define TR_TEMP_CALIB          "Temp.  Calib."
 #define TR_TIME                "Tijd:"
+
+#define TR_BLUETOOTH           "Bluetooth"
 #define TR_BAUDRATE            "BT Baudrate"
+#define LEN_BLUETOOTH_MODES    "\011"
+#define TR_BLUETOOTH_MODES     "---\0     ""Telemetry""Trainer\0"
+
 #define TR_SD_INFO_TITLE       "SD-INFO"
 #define TR_SD_TYPE             "Type:"
 #define TR_SD_SPEED            "Snelheid:"
@@ -1026,6 +1040,9 @@
 #define TR_ANTENNACONFIRM2     "Is er zeker een antenne geplaatst!"
 #define TR_LOWALARM            INDENT "Waarschuwing"
 #define TR_CRITICALALARM       INDENT "Kritiek Alarm"
+#define TR_RSSIALARM_WARN             TR("RSSI","TELEMETRY RSSI")
+#define TR_NO_RSSIALARM                TR(INDENT "Alarms disabled", INDENT "Telemetry alarms disabled")
+#define TR_DISABLE_ALARM               TR(INDENT "Disable alarms", INDENT "Disable telemetry alarms")
 #define TR_ENABLE_POPUP        "Inschakelen Popups"
 #define TR_DISABLE_POPUP       "Uitschakelen Popups"
 #define TR_POPUP               "Popup"

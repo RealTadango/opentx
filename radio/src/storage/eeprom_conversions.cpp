@@ -436,8 +436,14 @@ typedef union {
   FrSkyLineData_v216 lines[4];
 } FrSkyScreenData_v216;
 
+
+PACK(struct FrSkyChannelData_v216 {
+  uint8_t unused[7];
+});
+
+
 PACK(typedef struct {
-  FrSkyChannelData channels[4];
+  FrSkyChannelData_v216 channels[4];
   uint8_t usrProto; // Protocol in FrSky user data, 0=None, 1=FrSky hub, 2=WS HowHigh, 3=Halcyon
   uint8_t voltsSource:7;
   uint8_t altitudeDisplayed:1;
@@ -450,7 +456,7 @@ PACK(typedef struct {
   int8_t  varioCenterMin;
   int8_t  varioMin;
   int8_t  varioMax;
-  FrSkyRSSIAlarm rssiAlarms[2];
+  uint8_t rssiAlarms[2];
   uint16_t mAhPersistent:1;
   uint16_t storedMah:15;
   int8_t   fasOffset;
@@ -613,6 +619,7 @@ PACK(typedef struct {
   GVarData gvars[MAX_GVARS];
 
   FrSkyTelemetryData frsky;
+  RssiAlarmData rssiAlarms;
 
   MODELDATA_EXTRA_217
 
@@ -745,7 +752,7 @@ PACK(typedef struct {
   uint16_t mAhUsed;
   uint32_t globalTimer;
   int8_t   temperatureCalib;
-  uint8_t  btBaudrate;
+  uint8_t  bluetoothBaudrate;
   uint8_t  optrexDisplay;
   uint8_t  sticksGain;
   uint8_t  rotarySteps;
@@ -816,7 +823,7 @@ void ConvertRadioData_217_to_218(RadioData & settings)
   settings.vBatMax = settings_v217.vBatMax;
   settings.backlightBright = settings_v217.backlightBright;
   settings.globalTimer = settings_v217.globalTimer;
-  settings.btBaudrate = settings_v217.btBaudrate;
+  settings.bluetoothBaudrate = settings_v217.bluetoothBaudrate;
   settings.countryCode = settings_v217.countryCode;
   settings.imperial = settings_v217.imperial;
   settings.ttsLanguage[0] = settings_v217.ttsLanguage[0];
@@ -842,7 +849,6 @@ void ConvertRadioData_217_to_218(RadioData & settings)
 #endif
 
 #if defined(PCBX9E)
-  settings.bluetoothEnable = settings_v217.bluetoothEnable;
   memcpy(settings.bluetoothName, settings_v217.bluetoothName, sizeof(settings.bluetoothName));
 #endif
 
@@ -1007,7 +1013,7 @@ void ConvertModel_216_to_217(ModelData & model)
   newModel.switchWarningEnable = oldModel.switchWarningEnable;
   memcpy(newModel.gvars, oldModel.gvars, sizeof(newModel.gvars));
 
-  memcpy(&newModel.frsky.rssiAlarms, &oldModel.frsky.rssiAlarms, sizeof(newModel.frsky.rssiAlarms));
+  memcpy(&newModel.rssiAlarms, &oldModel.frsky.rssiAlarms, sizeof(newModel.rssiAlarms));
 
   for (int i=0; i<NUM_MODULES+1; i++) {
     newModel.moduleData[i].type = 0;

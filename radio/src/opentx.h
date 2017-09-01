@@ -146,7 +146,7 @@
   #define CASE_SDCARD(x)
 #endif
 
-#if defined(BLUETOOTH)
+#if defined(BLUETOOTH) && !(defined(PCBX9E) && !defined(DEBUG))
   #define CASE_BLUETOOTH(x) x,
 #else
   #define CASE_BLUETOOTH(x)
@@ -194,6 +194,12 @@
   #define CASE_PCBX9E(x)
 #endif
 
+#if defined(BLUETOOTH) && (!defined(PCBX9E) || defined(DEBUG))
+  #define CASE_BLUETOOTH(x) x,
+#else
+  #define CASE_BLUETOOTH(x)
+#endif
+
 #if defined(PCBSKY9X) && !defined(AR9X) && !defined(REVA)
   #define TX_CAPACITY_MEASUREMENT
   #define CASE_CAPACITY(x) x,
@@ -217,6 +223,16 @@
 #endif
 
 #define IS_FAI_FORBIDDEN(idx) (IS_FAI_ENABLED() && idx >= MIXSRC_FIRST_TELEM)
+
+#if defined(BLUETOOTH)
+#if defined(X9E)
+  #define IS_BLUETOOTH_TRAINER()       (g_model.trainerMode == TRAINER_MODE_SLAVE_BLUETOOTH)
+#else
+  #define IS_BLUETOOTH_TRAINER()       (g_model.trainerMode == TRAINER_MODE_MASTER_BLUETOOTH || g_model.trainerMode == TRAINER_MODE_SLAVE_BLUETOOTH)
+#endif
+#else
+  #define IS_BLUETOOTH_TRAINER()       false
+#endif
 
 #if defined(CPUARM)
   #define MASTER_VOLUME
@@ -329,12 +345,12 @@ void memswap(void * a, void * b, uint8_t size);
   #define IF_ROTARY_ENCODERS(x)
 #endif
 
-#define PPM_CENTER 1500
+#define PPM_CENTER                     1500
 
 #if defined(PPM_CENTER_ADJUSTABLE)
-  #define PPM_CH_CENTER(ch) (PPM_CENTER+limitAddress(ch)->ppmCenter)
+  #define PPM_CH_CENTER(ch)            (PPM_CENTER + limitAddress(ch)->ppmCenter)
 #else
-  #define PPM_CH_CENTER(ch) (PPM_CENTER)
+  #define PPM_CH_CENTER(ch)            (PPM_CENTER)
 #endif
 
 #if defined(CPUARM)
@@ -342,7 +358,7 @@ void memswap(void * a, void * b, uint8_t size);
   #include "io/io_arm.h"
   // This doesn't need protection on this processor
   extern volatile tmr10ms_t g_tmr10ms;
-  #define get_tmr10ms() g_tmr10ms
+  #define get_tmr10ms()                g_tmr10ms
 #else
   extern volatile tmr10ms_t g_tmr10ms;
   extern inline uint16_t get_tmr10ms()
@@ -373,8 +389,8 @@ void memswap(void * a, void * b, uint8_t size);
 #include "pulses/pulses.h"
 
 #if defined(CPUARM)
-// Order is the same as in enum Protocols in myeeprom.h (none, ppm, xjt, dsm, crossfire, multi)
-  static const int8_t maxChannelsModules[] = { 0, 8, 8, -2, 8, 4 }; // relative to 8!
+// Order is the same as in enum Protocols in myeeprom.h (none, ppm, xjt, dsm, crossfire, multi, r9m)
+  static const int8_t maxChannelsModules[] = { 0, 8, 8, -2, 8, 4, 8}; // relative to 8!
   static const int8_t maxChannelsXJT[] = { 0, 8, 0, 4 }; // relative to 8!
   #define MAX_TRAINER_CHANNELS_M8()    (MAX_TRAINER_CHANNELS-8)
 #endif
@@ -388,11 +404,10 @@ void memswap(void * a, void * b, uint8_t size);
 #if defined(PCBTARANIS) || defined(PCBHORUS)
   #if defined(TARANIS_INTERNAL_PPM)
     #define IS_MODULE_PPM(idx)              (idx==TRAINER_MODULE || (idx==INTERNAL_MODULE && g_model.moduleData[INTERNAL_MODULE].type==MODULE_TYPE_PPM)|| (idx==EXTERNAL_MODULE && g_model.moduleData[EXTERNAL_MODULE].type==MODULE_TYPE_PPM))
-    #define IS_MODULE_XJT(idx)              (((idx==INTERNAL_MODULE && g_model.moduleData[INTERNAL_MODULE].type==MODULE_TYPE_XJT)|| (idx==EXTERNAL_MODULE && g_model.moduleData[EXTERNAL_MODULE].type==MODULE_TYPE_XJT)) && (g_model.moduleData[idx].rfProtocol != RF_PROTO_OFF))
   #else
     #define IS_MODULE_PPM(idx)              (idx==TRAINER_MODULE || (idx==EXTERNAL_MODULE && g_model.moduleData[EXTERNAL_MODULE].type==MODULE_TYPE_PPM))
-    #define IS_MODULE_XJT(idx)              ((idx==INTERNAL_MODULE || g_model.moduleData[EXTERNAL_MODULE].type==MODULE_TYPE_XJT) && (g_model.moduleData[idx].rfProtocol != RF_PROTO_OFF))
   #endif
+  #define IS_MODULE_XJT(idx)                (g_model.moduleData[idx].type==MODULE_TYPE_XJT)
   #if defined(DSM2)
     #define IS_MODULE_DSM2(idx)             (idx==EXTERNAL_MODULE && g_model.moduleData[EXTERNAL_MODULE].type==MODULE_TYPE_DSM2)
   #else
@@ -428,6 +443,9 @@ void memswap(void * a, void * b, uint8_t size);
   #define MAX_CHANNELS(idx)                 (idx==EXTERNAL_MODULE ? MAX_EXTERNAL_MODULE_CHANNELS() : MAX_TRAINER_CHANNELS_M8())
   #define NUM_CHANNELS(idx)                 (8+g_model.moduleData[idx].channelsCount)
 #endif
+#define IS_MODULE_R9M(idx)                (g_model.moduleData[idx].type==MODULE_TYPE_R9M)
+#define IS_MODULE_PXX(idx)                (IS_MODULE_XJT(idx) || IS_MODULE_R9M(idx))
+
 
 #if defined(MULTIMODULE)
 #define IS_MULTIMODULE_DSM(idx)             (IS_MODULE_MULTIMODULE(idx) && g_model.moduleData[idx].getMultiProtocol(true) == MM_RF_PROTO_DSM2)
@@ -1231,6 +1249,7 @@ enum AUDIO_SOUNDS {
   AU_SENSOR_LOST,
   AU_SERVO_KO,
   AU_RX_OVERLOAD,
+  AU_MODEL_STILL_POWERED,
 #endif
 #if defined(PCBSKY9X)
   AU_TX_MAH_HIGH,
@@ -1256,6 +1275,10 @@ enum AUDIO_SOUNDS {
   AU_POT2_MIDDLE,
   AU_SLIDER1_MIDDLE,
   AU_SLIDER2_MIDDLE,
+#if defined(PCBX9E)
+  AU_SLIDER3_MIDDLE,
+  AU_SLIDER4_MIDDLE,
+#endif
 #elif defined(CPUARM)
   AU_POT1_MIDDLE,
   AU_POT2_MIDDLE,
@@ -1373,7 +1396,9 @@ union ReusableBuffer
   // 275 bytes
   struct
   {
+#if !defined(CPUARM)
     char listnames[NUM_BODY_LINES][LEN_MODEL_NAME];
+#endif
 #if defined(EEPROM_RLC) && LCD_W < 212
     uint16_t eepromfree;
 #endif
@@ -1384,6 +1409,10 @@ union ReusableBuffer
     char mainname[LEN_MODEL_NAME];
 #endif
   } modelsel;
+
+  struct {
+    char msg[64];
+  } msgbuf; // used in modelsel and modelsetup (only in a warning message)
 
   // 103 bytes
   struct
@@ -1528,7 +1557,9 @@ inline int div_and_round(int num, int den)
 }
 
 #if defined(TELEMETRY_FRSKY)
+#if !defined(CPUARM)
 NOINLINE uint8_t getRssiAlarmValue(uint8_t alarm);
+#endif
 
 extern const pm_uint8_t bchunit_ar[];
 
@@ -1686,6 +1717,10 @@ extern JitterMeter<uint16_t> avgJitter[NUM_ANALOGS];
 
 #if defined(INTERNAL_GPS)
   #include "gps.h"
+#endif
+
+#if defined(BLUETOOTH)
+#include "bluetooth.h"
 #endif
 
 #endif // _OPENTX_H_
