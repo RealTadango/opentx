@@ -1403,12 +1403,7 @@ class InputField: public TransformedField {
 
     virtual void afterImport()
     {
-      if (IS_STM32(board) && version < 216) {
-        if (expo.mode) {
-          expo.srcRaw = RawSource(SOURCE_TYPE_STICK, expo.chn);
-        }
-      }
-      else if (expo.mode) {
+      if ((IS_STM32(board) && version < 216 )|| (!IS_STM32(board) && expo.mode)) {
         expo.srcRaw = RawSource(SOURCE_TYPE_STICK, expo.chn);
       }
 
@@ -3703,7 +3698,8 @@ OpenTxGeneralData::OpenTxGeneralData(GeneralSettings & generalData, Board::Type 
       if (version >= 218) {
         internalField.Append(new BoolField<1>(this, generalData.jitterFilter));
         internalField.Append(new BoolField<1>(this, generalData.disableRssiPoweroffAlarm));
-        internalField.Append(new SpareBitsField<5>(this));
+        internalField.Append(new UnsignedField<2>(this, generalData.usbMode));
+        internalField.Append(new SpareBitsField<3>(this));
       }
       else {
         internalField.Append(new SpareBitsField<7>(this));

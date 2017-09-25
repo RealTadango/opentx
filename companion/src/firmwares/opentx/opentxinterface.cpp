@@ -31,7 +31,7 @@
 using namespace Board;
 
 #define OPENTX_FIRMWARE_DOWNLOADS        "http://downloads-22.open-tx.org/firmware"
-#define OPENTX_NIGHT_FIRMWARE_DOWNLOADS  "http://downloads-22.open-tx.org/nightly/firmware"
+#define OPENTX_NIGHT_FIRMWARE_DOWNLOADS  "http://downloads-22.open-tx.org/nightlies/firmware"
 
 #define FILE_TYP_GENERAL 1
 #define FILE_TYP_MODEL   2
@@ -1133,10 +1133,6 @@ void addOpenTxFrskyOptions(OpenTxFirmware * firmware)
   firmware->addOption("lua", QObject::tr("Support for Lua model scripts"));
   firmware->addOption("luac", QObject::tr("Enable Lua compiler"));
   firmware->addOption("bindopt", QObject::tr("Enable bindings options"));
-  Option usb_options[] = {{"massstorage", QObject::tr("Instead of Joystick emulation, USB connection is Mass Storage (as in the Bootloader)")},
-                          {"cli",         QObject::tr("Instead of Joystick emulation, USB connection is Command Line Interface")},
-                          {NULL}};
-  firmware->addOptions(usb_options);
 }
 
 void addOpenTxTaranisOptions(OpenTxFirmware * firmware)

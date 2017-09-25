@@ -2,7 +2,7 @@
  * Copyright (C) OpenTX
  *
  * Based on code named
- *   th9x - http://code.google.com/p/th9x 
+ *   th9x - http://code.google.com/p/th9x
  *   er9x - http://code.google.com/p/er9x
  *   gruvin9x - http://code.google.com/p/gruvin9x
  *
@@ -32,6 +32,7 @@ void menuStatisticsView(event_t event)
   switch(event)
   {
     case EVT_KEY_FIRST(KEY_UP):
+    case EVT_KEY_FIRST(KEY_MENU):
       chainMenu(menuStatisticsDebug);
       break;
 
@@ -90,13 +91,6 @@ void menuStatisticsView(event_t event)
 #define MENU_DEBUG_Y_FREE_RAM (4*FH-1)
 #define MENU_DEBUG_Y_USB      (5*FH)
 #define MENU_DEBUG_Y_RTOS     (6*FH)
-
-#if defined(USB_SERIAL)
-  extern uint16_t usbWraps;
-  extern uint16_t charsWritten;
-  extern "C" volatile uint32_t APP_Rx_ptr_in;
-  extern "C" volatile uint32_t APP_Rx_ptr_out;
-#endif
 
 void menuStatisticsDebug(event_t event)
 {

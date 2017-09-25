@@ -27,7 +27,7 @@
   #define MODULES_INIT(...)            __VA_ARGS__
 #endif
 
-#if defined(PCBHORUS) && PCBREV < 13
+#if defined(PCBX12S) && PCBREV < 13
   #define pulse_duration_t             uint32_t
   #define trainer_pulse_duration_t     uint16_t
 #else
@@ -101,8 +101,6 @@ PACK(struct Dsm2TimerPulsesData {
 });
 #endif
 
-#define CROSSFIRE_BAUDRATE             400000
-#define CROSSFIRE_FRAME_PERIOD         4 // 4ms
 #define CROSSFIRE_FRAME_MAXLEN         64
 #define CROSSFIRE_CHANNELS_COUNT       16
 PACK(struct CrossfirePulsesData {

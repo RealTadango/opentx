@@ -22,6 +22,7 @@
 #define _BOARD_H_
 
 #include "stddef.h"
+#include "stdbool.h"
 
 #if defined(__cplusplus) && !defined(SIMU)
 extern "C" {
@@ -71,6 +72,7 @@ extern "C" {
 #pragma clang diagnostic pop
 #endif
 
+#include "usb_driver.h"
 #if !defined(SIMU)
   #include "usbd_cdc_core.h"
   #include "usbd_msc_core.h"
@@ -157,13 +159,14 @@ uint32_t sdGetSpeed(void);
 #define sdInit()
 #define sdMount()
 #define sdDone()
+#define SD_CARD_PRESENT()             true
 #else
 void sdInit(void);
 void sdMount(void);
 void sdDone(void);
 void sdPoll10ms(void);
 uint32_t sdMounted(void);
-#define SD_CARD_PRESENT()              (~SD_GPIO_PRESENT->IDR & SD_GPIO_PIN_PRESENT)
+#define SD_CARD_PRESENT()              ((SD_GPIO_PRESENT->IDR & SD_GPIO_PIN_PRESENT)==0)
 #endif
 
 // Flash Write driver
@@ -453,14 +456,7 @@ uint8_t isBacklightEnabled(void);
   #define BACKLIGHT_ENABLE()           backlightEnable(g_eeGeneral.backlightBright)
 #endif
 
-// USB driver
-int usbPlugged();
-void usbInit();
-void usbStart();
-void usbStop();
-uint8_t usbStarted();
-void usbSerialPutc(uint8_t c);
-#if defined(USB_JOYSTICK) && !defined(SIMU)
+#if !defined(SIMU)
   void usbJoystickUpdate();
 #endif
 #define USB_NAME                       "FrSky Taranis"
@@ -549,9 +545,14 @@ void serial2Stop(void);
 
 // BT driver
 #define BLUETOOTH_DEFAULT_BAUDRATE     115200
+#if defined(PCBX9E) && !defined(USEHORUSBT)
 #define BLUETOOTH_FACTORY_BAUDRATE     9600
+#else
+#define BLUETOOTH_FACTORY_BAUDRATE     57600
+#endif
 void bluetoothInit(uint32_t baudrate);
 void bluetoothWriteWakeup(void);
+uint8_t bluetoothIsWriting(void);
 void bluetoothDone(void);
 
 // LED driver

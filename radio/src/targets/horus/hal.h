@@ -221,7 +221,7 @@
   #define ADC_CHANNEL_POT1              ADC_Channel_10  // ADC3_IN10
   #define ADC_CHANNEL_POT2              ADC_Channel_11  // ADC3_IN11
   #define ADC_CHANNEL_POT3              ADC_Channel_12  // ADC3_IN12
-  #define ADC_CHANNEL_SLIDER1           ADC_Channel_4   // ADC3_IN13
+  #define ADC_CHANNEL_SLIDER1           ADC_Channel_4   // ADC3_IN4
   #define ADC_CHANNEL_SLIDER2           ADC_Channel_13  // ADC3_IN13
   #define ADC_CHANNEL_BATT              ADC_Channel_5   // ADC3_IN5
   #define ADC_CHANNEL_EXT1              ADC_Channel_6   // ADC3_IN6
@@ -515,7 +515,7 @@
   #define INTMODULE_BOOT_GPIO           GPIOI
   #define INTMODULE_BOOT_GPIO_PIN       GPIO_PIN_9  // PI.09
 #endif
-#if PCBREV >= 13
+#if defined(PCBX10) || PCBREV >= 13
   #define INTMODULE_RCC_APB1Periph      RCC_APB1Periph_TIM2
   #define INTMODULE_RCC_APB2Periph      RCC_APB2Periph_USART1
   #define INTMODULE_TIMER               TIM2
@@ -534,7 +534,7 @@
 // External Module
 #define EXTMODULE_PWR_GPIO              GPIOB
 #define EXTMODULE_PWR_GPIO_PIN          GPIO_Pin_3  // PB.03
-#if PCBREV >= 13
+#if defined(PCBX10) || PCBREV >= 13
   #define EXTMODULE_RCC_AHB1Periph      (RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_DMA2)
   #define EXTMODULE_RCC_APB1Periph      0
   #define EXTMODULE_RCC_APB2Periph      RCC_APB2Periph_TIM1

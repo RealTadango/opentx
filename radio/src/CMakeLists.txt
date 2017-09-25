@@ -14,6 +14,8 @@ set_property(CACHE SPLASH PROPERTY STRINGS DEFAULT OFF FRSKY)
 set(PPM_UNIT "PERCENT_PREC1" CACHE STRING "PPM display unit (US/PERCENT_PREC1/PERCENT_PREC0)")
 set_property(CACHE PPM_UNIT PROPERTY STRINGS US PERCENT_PREC1 PERCENT_PREC0)
 set(DEFAULT_MODE "" CACHE STRING "Default sticks mode")
+set(FONT "STD" CACHE STRING "Choose font : STD or SQT5")
+set_property(CACHE FONT PROPERTY STRINGS SQT5)
 
 option(HELI "Heli menu" ON)
 option(FLIGHT_MODES "Flight Modes" ON)
@@ -41,6 +43,9 @@ option(TRACE_SIMPGMSPACE "Turn on traces in simpgmspace.cpp" ON)
 option(TRACE_LUA_INTERNALS "Turn on traces for Lua internals" OFF)
 option(BINDING_OPTIONS "Allow advanced frsky bindings" OFF)
 option(FRSKY_STICKS "Reverse sticks for FrSky sticks" OFF)
+option(NANO "Use nano newlib and binalloc")
+option(NIGHTLY_BUILD_WARNING "Warn this is a nightly build" OFF)
+option(USEHORUSBT "X9E BT module replaced by Horus BT module" OFF)
 
 # since we reset all default CMAKE compiler flags for firmware builds, provide an alternate way for user to specify additional flags.
 set(FIRMWARE_C_FLAGS "" CACHE STRING "Additional flags for firmware target c compiler (note: all CMAKE_C_FLAGS[_*] are ignored for firmware/bootloader).")
@@ -336,9 +341,21 @@ if(FRSKY_STICKS)
   add_definitions(-DFRSKY_STICKS)
 endif()
 
+if(NOT FONT STREQUAL "")
+  add_definitions(-DFONT=${DEFAULT_MODE})
+endif()
+
 if(EEPROM_VARIANT_NEEDED)
   add_definitions(-DEEPROM_VARIANT=${EEPROM_VARIANT})
 endif()
+
+if(NIGHTLY_BUILD_WARNING)
+  add_definitions(-DNIGHTLY_BUILD_WARNING)
+endif(NIGHTLY_BUILD_WARNING)
+
+if(USEHORUSBT)
+  add_definitions(-DUSEHORUSBT)
+endif(USEHORUSBT)
 
 set(SRC
   ${SRC}
@@ -467,6 +484,18 @@ if(NOT MSVC)
       add_definitions(-DSEMIHOSTING)
       set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --specs=rdimon.specs")
     endif()
+    # Use newlib nano, which saves a few kilobytes.
+    if(NOT NANO STREQUAL NO)
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --specs=nano.specs")
+      if(NOT LUA STREQUAL NO)
+        # Lua needs %g and %f
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -u _printf_float -u _scanf_float")
+      endif()
+      # Nano's malloc does work well with lua, use our own
+      add_definitions(-DUSE_BIN_ALLOCATOR)
+      set(SRC ${SRC} bin_allocator.cpp)
+    endif()
+
 
     if(PCB STREQUAL X9D OR PCB STREQUAL X9D+ OR PCB STREQUAL X9E OR PCB STREQUAL X7 OR PCB STREQUAL X7S)
       add_subdirectory(targets/${TARGET_DIR}/bootloader)

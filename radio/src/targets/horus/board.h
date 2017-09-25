@@ -22,6 +22,7 @@
 #define _BOARD_HORUS_H_
 
 #include "stddef.h"
+#include "stdbool.h"
 
 #if defined(__cplusplus) && !defined(SIMU)
 extern "C" {
@@ -62,6 +63,7 @@ extern "C" {
 #pragma clang diagnostic pop
 #endif
 
+#include "usb_driver.h"
 
 #if !defined(SIMU)
 #include "usbd_cdc_core.h"
@@ -218,7 +220,7 @@ enum EnumKeys
   KEY_RIGHT = KEY_TELEM,
   KEY_RADIO,
   KEY_LEFT = KEY_RADIO,
-  
+
   TRM_BASE,
   TRM_LH_DWN = TRM_BASE,
   TRM_LH_UP,
@@ -233,7 +235,7 @@ enum EnumKeys
   TRM_RS_DWN,
   TRM_RS_UP,
   TRM_LAST = TRM_RS_UP,
-  
+
   NUM_KEYS
 };
 
@@ -443,18 +445,17 @@ void backlightInit(void);
 #else
 void backlightEnable(uint8_t dutyCycle);
 #endif
-#define BACKLIGHT_ENABLE()    backlightEnable(unexpectedShutdown ? 100 : 100-g_eeGeneral.backlightBright)
-#define BACKLIGHT_DISABLE()   backlightEnable(unexpectedShutdown ? 100 : g_eeGeneral.blOffBright)
+#define BACKLIGHT_LEVEL_MAX   100
+#if defined(PCBX12S)
+#define BACKLIGHT_LEVEL_MIN   5
+#else
+#define BACKLIGHT_LEVEL_MIN   42
+#endif
+#define BACKLIGHT_ENABLE()    backlightEnable(unexpectedShutdown ? BACKLIGHT_LEVEL_MAX : BACKLIGHT_LEVEL_MAX-g_eeGeneral.backlightBright)
+#define BACKLIGHT_DISABLE()   backlightEnable(unexpectedShutdown ? BACKLIGHT_LEVEL_MAX : g_eeGeneral.blOffBright)
 #define isBacklightEnabled()  true
 
-// USB driver
-int usbPlugged();
-void usbInit();
-void usbStart();
-void usbStop();
-uint8_t usbStarted();
-void usbSerialPutc(uint8_t c);
-#if defined(USB_JOYSTICK) && !defined(SIMU)
+#if !defined(SIMU)
 void usbJoystickUpdate();
 #endif
 #if defined(PCBX12S)
@@ -462,7 +463,7 @@ void usbJoystickUpdate();
   #define USB_MANUFACTURER             'F', 'r', 'S', 'k', 'y', ' ', ' ', ' '  /* 8 bytes */
   #define USB_PRODUCT                  'H', 'o', 'r', 'u', 's', ' ', ' ', ' '  /* 8 Bytes */
 #elif defined(PCBX10)
-  #define USB_NAME                     "FrSky HX10"
+  #define USB_NAME                     "FrSky X10"
   #define USB_MANUFACTURER             'F', 'r', 'S', 'k', 'y', ' ', ' ', ' '  /* 8 bytes */
   #define USB_PRODUCT                  'X', '1', '0', ' ', ' ', ' ', ' ', ' '  /* 8 Bytes */
 #endif
@@ -526,9 +527,11 @@ void serial2Stop(void);
 int sbusGetByte(uint8_t * byte);
 
 // BT driver
+#define BLUETOOTH_FACTORY_BAUDRATE     57600
 #define BLUETOOTH_DEFAULT_BAUDRATE     115200
 void bluetoothInit(uint32_t baudrate);
 void bluetoothWriteWakeup(void);
+uint8_t bluetoothIsWriting(void);
 void bluetoothDone(void);
 
 extern uint8_t currentTrainerMode;
