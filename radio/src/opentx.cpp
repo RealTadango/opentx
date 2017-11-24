@@ -1922,6 +1922,7 @@ void opentxStart(OPENTX_START_ARGS)
   else {
     checkAlarm();
     checkAll();
+    PLAY_MODEL_NAME();
   }
 #endif
 }
@@ -1988,7 +1989,7 @@ void opentxClose(uint8_t shutdown)
 }
 #endif
 
-#if defined(USB_MASS_STORAGE)
+#if defined(STM32)
 void opentxResume()
 {
   TRACE("opentxResume");
@@ -2464,10 +2465,6 @@ uint16_t stackAvailable()
 
 void opentxInit(OPENTX_INIT_ARGS)
 {
-#if defined(DEBUG) && defined(USB_SERIAL)
-  // CoTickDelay(5000); // 10s
-#endif
-
   TRACE("opentxInit");
 
 #if defined(GUI)
@@ -2653,6 +2650,10 @@ int main()
   wdt_disable();
 
   boardInit();
+
+#if defined(PCBX7)
+  bluetoothInit(BLUETOOTH_DEFAULT_BAUDRATE);   //BT is turn on for a brief period to differentiate X7 and X7S
+#endif
 
 #if defined(GUI) && !defined(PCBTARANIS) && !defined(PCBFLAMENCO) && !defined(PCBHORUS)
   // TODO remove this

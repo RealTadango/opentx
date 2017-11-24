@@ -200,6 +200,12 @@
   #define CASE_PCBX9E(x)
 #endif
 
+#if defined(PCBX10)
+  #define CASE_PCBX10(x) x,
+#else
+  #define CASE_PCBX10(x)
+#endif
+
 #if defined(BLUETOOTH) && !(defined(PCBX9E) && !defined(USEHORUSBT))
   #define CASE_BLUETOOTH(x) x,
 #else
@@ -1674,7 +1680,7 @@ FORCEINLINE void convertUnit(getvalue_t & val, uint8_t & unit)
   extern const pm_uchar logo_taranis[];
 #endif
 
-#if defined(USB_MASS_STORAGE)
+#if defined(STM32)
 void usbPluggedIn();
 #endif
 

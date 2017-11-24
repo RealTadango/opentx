@@ -99,6 +99,7 @@ const int Boards::getFlashSize(Type board)
     case BOARD_TARANIS_X9D:
     case BOARD_TARANIS_X9DP:
     case BOARD_TARANIS_X9E:
+    case BOARD_TARANIS_X7:
     case BOARD_FLAMENCO:
       return FSIZE_TARANIS;
     case BOARD_X12S:
@@ -151,10 +152,10 @@ const SwitchInfo Boards::getSwitchInfo(Board::Type board, unsigned index)
   }
   else {
     const Board::SwitchInfo switches[] = {
+      {SWITCH_3POS,   "3POS"},
       {SWITCH_2POS,   "THR"},
       {SWITCH_2POS,   "RUD"},
       {SWITCH_2POS,   "ELE"},
-      {SWITCH_3POS,   "3POS"},
       {SWITCH_2POS,   "AIL"},
       {SWITCH_2POS,   "GEA"},
       {SWITCH_TOGGLE, "TRN"}

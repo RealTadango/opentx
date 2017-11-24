@@ -1132,7 +1132,7 @@ void addOpenTxFrskyOptions(OpenTxFirmware * firmware)
   addOpenTxArmOptions(firmware);
   firmware->addOption("noheli", QObject::tr("Disable HELI menu and cyclic mix support"));
   firmware->addOption("nogvars", QObject::tr("Disable Global variables"));
-  firmware->addOption("lua", QObject::tr("Support for Lua model scripts"));
+  firmware->addOption("lua", QObject::tr("Enable Lua custom scripts screen"));
   firmware->addOption("luac", QObject::tr("Enable Lua compiler"));
   firmware->addOption("bindopt", QObject::tr("Enable bindings options"));
 }
@@ -1221,23 +1221,22 @@ void registerOpenTxFirmwares()
   registerOpenTxFirmware(firmware);
 
   /* FrSky X7 board */
-  firmware = new OpenTxFirmware("opentx-x7", QObject::tr("FrSky Taranis X7"), BOARD_TARANIS_X7);
+  firmware = new OpenTxFirmware("opentx-x7", QObject::tr("FrSky Taranis X7 / X7S"), BOARD_TARANIS_X7);
   // No mixersmon for now
   addOpenTxFrskyOptions(firmware);
   firmware->addOption("internalppm", QObject::tr("Support for PPM internal module hack"));
   firmware->addOption("sqt5font", QObject::tr("Use alternative SQT5 font"));
   registerOpenTxFirmware(firmware);
 
-  /* FrSky Horus board */
-  firmware = new OpenTxFirmware("opentx-x12s", QObject::tr("FrSky Horus"), BOARD_X12S);
+  /* FrSky X10 board */
+  firmware = new OpenTxFirmware("opentx-x10", QObject::tr("FrSky Horus X10 / X10S"), BOARD_X10);
   addOpenTxFrskyOptions(firmware);
-  firmware->addOption("pcbdev", QObject::tr("Use ONLY with first DEV pcb version"));
   registerOpenTxFirmware(firmware);
 
-
-  /* FrSky X10 board */
-  firmware = new OpenTxFirmware("opentx-x10", QObject::tr("FrSky X10"), BOARD_X10);
+  /* FrSky Horus board */
+  firmware = new OpenTxFirmware("opentx-x12s", QObject::tr("FrSky Horus X12S"), BOARD_X12S);
   addOpenTxFrskyOptions(firmware);
+  firmware->addOption("pcbdev", QObject::tr("Use ONLY with first DEV pcb version"));
   registerOpenTxFirmware(firmware);
 
   /* 9XR-Pro */
