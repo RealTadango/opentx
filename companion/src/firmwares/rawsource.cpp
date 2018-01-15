@@ -320,13 +320,17 @@ QString RawSource::toString(const ModelData * model, const GeneralSettings * con
     tr("TrmR"), tr("TrmE"), tr("TrmT"), tr("TrmA"), tr("Trm5"), tr("Trm6")
   };
 
+  static const QString trims2[] = {
+    tr("TrmH"), tr("TrmV")
+  };
+
   static const QString special[] = {
     tr("Batt"), tr("Time"), tr("Timer1"), tr("Timer2"), tr("Timer3"),
   };
 
   static const QString telemetry[] = {
     tr("Batt"), tr("Time"), tr("Timer1"), tr("Timer2"), tr("Timer3"),
-    tr("SWR"), tr("RSSI Tx"), tr("RSSI Rx"),
+    tr("RAS"), tr("RSSI Tx"), tr("RSSI Rx"),
     tr("A1"), tr("A2"), tr("A3"), tr("A4"),
     tr("Alt"), tr("Rpm"), tr("Fuel"), tr("T1"), tr("T2"),
     tr("Speed"), tr("Dist"), tr("GPS Alt"),
@@ -376,9 +380,11 @@ QString RawSource::toString(const ModelData * model, const GeneralSettings * con
       return result;
 
     case SOURCE_TYPE_TRIM:
-      return CHECK_IN_ARRAY(trims, index);
+      return (Boards::getCapability(board, Board::NumTrims) == 2 ? CHECK_IN_ARRAY(trims2, index) : CHECK_IN_ARRAY(trims, index));
+
     case SOURCE_TYPE_ROTARY_ENCODER:
       return CHECK_IN_ARRAY(rotary, index);
+
     case SOURCE_TYPE_MAX:
       return tr("MAX");
 
@@ -518,7 +524,7 @@ bool RawSource::isAvailable(const ModelData * const model, const GeneralSettings
         if (type == (int)TELEMETRY_SOURCE_TX_TIME && !fw->getCapability(RtcTime))
           return false;
 
-        if (type == (int)TELEMETRY_SOURCE_SWR && !fw->getCapability(SportTelemetry))
+        if (type == (int)TELEMETRY_SOURCE_RAS && !fw->getCapability(SportTelemetry))
           return false;
 
         if (type == (int)TELEMETRY_SOURCE_TIMER3 && fw->getCapability(Timers) < 3)
