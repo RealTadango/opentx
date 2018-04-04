@@ -526,7 +526,6 @@ bool isRfProtocolAvailable(int protocol)
   return true;
 }
 
-#if defined(CPUARM)
 bool isTelemetryProtocolAvailable(int protocol)
 {
 #if defined(PCBTARANIS)
@@ -553,7 +552,6 @@ bool isTelemetryProtocolAvailable(int protocol)
 
   return true;
 }
-#endif
 
 #if defined(PCBHORUS)
 bool isTrainerModeAvailable(int mode)
@@ -585,7 +583,9 @@ bool isTrainerModeAvailable(int mode)
 #elif defined(PCBX7)
 bool isTrainerModeAvailable(int mode)
 {
-  if (mode == TRAINER_MODE_MASTER_SBUS_EXTERNAL_MODULE || mode == TRAINER_MODE_MASTER_CPPM_EXTERNAL_MODULE || mode == TRAINER_MODE_MASTER_BATTERY_COMPARTMENT)
+  if (IS_EXTERNAL_MODULE_ENABLED() && (mode == TRAINER_MODE_MASTER_SBUS_EXTERNAL_MODULE || mode == TRAINER_MODE_MASTER_CPPM_EXTERNAL_MODULE))
+    return false;
+  else if (mode == TRAINER_MODE_MASTER_BATTERY_COMPARTMENT)
     return false;
 #if defined(BLUETOOTH)
   else if (g_eeGeneral.bluetoothMode != BLUETOOTH_TRAINER && (mode == TRAINER_MODE_MASTER_BLUETOOTH || mode == TRAINER_MODE_SLAVE_BLUETOOTH))

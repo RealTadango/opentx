@@ -556,7 +556,7 @@
 #define TR_VTRAINER_SLAVE_JACK         "Allievo/Jack\0     "
 #define TR_VTRAINER_MASTER_SBUS_MODULE "Master/Modulo SBUS"
 #define TR_VTRAINER_MASTER_CPPM_MODULE "Master/Modulo CPPM"
-#define TR_VTRAINER_MASTER_BATTERY     "Master/Batteria\0  "
+#define TR_VTRAINER_MASTER_BATTERY     "Master/Serial\0    "
 #define TR_VTRAINER_BLUETOOTH          TR("Master/BT\0        ""Slave/BT\0", "Master/Bluetooth\0 ""Slave/Bluetooth\0  ")
 
 #define LEN_VFAILSAFE          "\013"
@@ -583,7 +583,7 @@
 #define LEN_VCELLINDEX         "\010"
 #define TR_VCELLINDEX          "Minore\0 ""1\0      ""2\0      ""3\0      ""4\0      ""5\0      ""6\0      ""Maggiore""Delta\0"
 
-#if defined(PCBX10)
+#if defined(PCBX10) || defined(PCBXLITE)
 #define LEN_VANTENNATYPES      "\010"
 #define TR_VANTENNATYPES       "Internal""External"
 #else
@@ -724,6 +724,7 @@
 #define TR_ALARMWARNING        INDENT"Spegni suono"
 #define TR_RSSISHUTDOWNALARM   TR(INDENT "Rssi Shutdown", INDENT "Check Rssi on Shutdown")
 #define TR_MODEL_STILL_POWERED "Model still powered"
+#define TR_MODEL_SHUTDOWN              "Shutdown ?"
 #define TR_PRESS_ENTER_TO_CONFIRM      "Press enter to confirm"
 #define TR_RENAVIG             "Navig EncRot "
 #define TR_THROTTLE_LABEL      "Motore"
@@ -1009,7 +1010,7 @@
 #define TR_FLASH_BOOTLOADER    "Flash BootLoader"
 #define TR_FLASH_EXTERNAL_DEVICE "Progr. Dispositivo Esterno"
 #define TR_FLASH_INTERNAL_MODULE "Progr. Modulo Interno"
-#define TR_FIRMWARE_UPDATE_ERROR "Firmware update error"
+#define TR_FIRMWARE_UPDATE_ERROR TR("FW update Error","Firmware update error")
 #define TR_WRITING             "\032Scrivendo..."
 #define TR_CONFIRM_FORMAT      "Confermi Format?"
 #define TR_INTERNALRF          "Modulo Interno"
@@ -1065,9 +1066,9 @@
 #define TR_UNIT                "Unita"
 #define TR_TELEMETRY_NEWSENSOR INDENT "Aggiungi nuovo sensore..."
 #define TR_CHANNELRANGE        INDENT "Numero Canali"
-#define TR_ANTENNASELECTION    INDENT "Antenna selection"
+#define TR_ANTENNASELECTION    TR(INDENT "Antenna", INDENT "Antenna selection")
 #define TR_ANTENNACONFIRM1     "Really switch?"
-#define TR_ANTENNACONFIRM2     "Make sure antenna is installed!"
+#define TR_ANTENNACONFIRM2     TR("Check antenna", "Make sure antenna is installed!")
 #define TR_LOWALARM            INDENT "Allarme Basso"
 #define TR_CRITICALALARM       INDENT "Allarme Critico"
 #define TR_RSSIALARM_WARN      TR("RSSI","TELEMETRY RSSI")
@@ -1370,3 +1371,14 @@
 #define ZSTR_GATE_NUMBER       "Gate"
 #define ZSTR_LAP_TIME          "LapT"
 #define ZSTR_GATE_TIME         "GteT"
+#define ZSTR_ESC_VOLTAGE       "EscV"
+#define ZSTR_ESC_CURRENT       "EscA"
+#define ZSTR_ESC_RPM           "EscR"
+#define ZSTR_ESC_CONSUMPTION   "EscC"
+#define ZSTR_ESC_TEMP          "EscT"
+#define ZSTR_SD1_CHANNEL       "Chan"
+#define ZSTR_GASSUIT_TEMP1     "GTp1"
+#define ZSTR_GASSUIT_TEMP2     "GTp2"
+#define ZSTR_GASSUIT_RPM       "GRPM"
+#define ZSTR_GASSUIT_FLOW      "GFlo"
+#define ZSTR_GASSUIT_CONS      "GFue"

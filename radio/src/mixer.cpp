@@ -448,6 +448,9 @@ getvalue_t getValue(mixsrc_t i)
 
 #if defined(CPUARM)
   else if (i <= MIXSRC_LAST_TELEM) {
+    if(IS_FAI_FORBIDDEN(i)) {
+      return 0;
+    }
     i -= MIXSRC_FIRST_TELEM;
     div_t qr = div(i, 3);
     TelemetryItem & telemetryItem = telemetryItems[qr.quot];
@@ -644,7 +647,7 @@ int getStickTrimValue(int stick, int stickValue)
     return 0;
 
   int trim = trims[stick];
-  if (stick == THR_STICK) {
+  if (IS_THROTTLE_TRIM(stick)) {
     if (g_model.thrTrim) {
       int trimMin = g_model.extendedTrims ? 2*TRIM_EXTENDED_MIN : 2*TRIM_MIN;
       trim = ((g_model.throttleReversed ? (trim+trimMin) : (trim-trimMin)) * (RESX-stickValue)) >> (RESX_SHIFT+1);
@@ -1089,7 +1092,6 @@ void evalFlightModeMixes(uint8_t mode, uint8_t tick10ms)
   mixWarning = lv_mixWarning;
 }
 
-int32_t sum_chans512[MAX_OUTPUT_CHANNELS] = {0};
 
 
 #define MAX_ACT 0xffff
@@ -1102,6 +1104,7 @@ uint8_t   flightModeTransitionLast = 255;
 
 void evalMixes(uint8_t tick10ms)
 {
+  int32_t sum_chans512[MAX_OUTPUT_CHANNELS];
 #if defined(PCBMEGA2560) && defined(DEBUG) && !defined(VOICE)
   PORTH |= 0x40; // PORTH:6 LOW->HIGH signals start of mixer interrupt
 #endif

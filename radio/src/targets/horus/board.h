@@ -400,9 +400,9 @@ uint16_t getBatteryVoltage();   // returns current battery voltage in 10mV steps
 #if NUM_PWMANALOGS > 0
 extern uint8_t analogs_pwm_disabled;
 #define ANALOGS_PWM_ENABLED()          (analogs_pwm_disabled == false)
-void pwmInit(void);
-void pwmRead(uint16_t * values);
-void pwmCheck();
+void analogPwmInit(void);
+void analogPwmRead(uint16_t * values);
+void analogPwmCheck();
 extern volatile uint32_t pwm_interrupt_count;
 #endif
 
@@ -465,7 +465,7 @@ void backlightEnable(uint8_t dutyCycle);
 #define BACKLIGHT_LEVEL_MIN   46
 #endif
 #define BACKLIGHT_ENABLE()    backlightEnable(unexpectedShutdown ? BACKLIGHT_LEVEL_MAX : BACKLIGHT_LEVEL_MAX-g_eeGeneral.backlightBright)
-#define BACKLIGHT_DISABLE()   backlightEnable(unexpectedShutdown ? BACKLIGHT_LEVEL_MAX : g_eeGeneral.blOffBright)
+#define BACKLIGHT_DISABLE()   backlightEnable(unexpectedShutdown ? BACKLIGHT_LEVEL_MAX : (g_eeGeneral.blOffBright == BACKLIGHT_LEVEL_MIN) ? 0 : g_eeGeneral.blOffBright)
 #define isBacklightEnabled()  true
 
 #if !defined(SIMU)

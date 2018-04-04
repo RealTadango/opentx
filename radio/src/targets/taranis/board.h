@@ -146,10 +146,12 @@ uint32_t sdGetSpeed(void);
 #define __disk_read                     disk_read
 #define __disk_write                    disk_write
 #if defined(SIMU)
-#define sdInit()
-#define sdMount()
-#define sdDone()
-#define SD_CARD_PRESENT()               true
+  #if !defined(SIMU_DISKIO)
+    #define sdInit()
+    #define sdDone()
+  #endif
+  #define sdMount()
+  #define SD_CARD_PRESENT()               true
 #else
 void sdInit(void);
 void sdMount(void);
@@ -296,14 +298,12 @@ enum EnumSwitchesPositions
   SW_SB0,
   SW_SB1,
   SW_SB2,
-#if !defined(PCBXLITE)
   SW_SC0,
   SW_SC1,
   SW_SC2,
   SW_SD0,
   SW_SD1,
   SW_SD2,
-#endif
 #if !defined(PCBX7) && !defined(PCBXLITE)
   SW_SE0,
   SW_SE1,
@@ -358,7 +358,7 @@ enum EnumSwitchesPositions
 #endif
 };
 #if defined(PCBXLITE)
-  #define NUM_SWITCHES                  2
+  #define NUM_SWITCHES                  4
 #elif defined(PCBX7)
   #define NUM_SWITCHES                  6
 #elif defined(PCBX9E)
@@ -427,6 +427,16 @@ enum Analogs {
 #define NUM_POTS                        (POT_LAST-POT_FIRST+1)
 #define NUM_XPOTS                       NUM_POTS
 #define NUM_SLIDERS                     (TX_VOLTAGE-POT_LAST-1)
+
+#if defined(PCBXLITE)
+  #define NUM_PWMANALOGS                4
+  extern uint8_t analogs_pwm_disabled;
+  #define ANALOGS_PWM_ENABLED()         (analogs_pwm_disabled == false)
+  void analogPwmInit(void);
+  void analogPwmRead(uint16_t * values);
+  void analogPwmCheck();
+  extern volatile uint32_t pwm_interrupt_count;
+#endif
 
 enum CalibratedAnalogs {
   CALIBRATED_STICK1,

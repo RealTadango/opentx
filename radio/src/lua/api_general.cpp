@@ -232,6 +232,9 @@ void luaGetValueAndPush(lua_State* L, int src)
         case UNIT_DATETIME:
           luaPushTelemetryDateTime(L, telemetrySensor, telemetryItems[qr.quot]);
           break;
+        case UNIT_TEXT:
+          lua_pushstring(L, telemetryItems[qr.quot].text);
+          break;
         case UNIT_CELLS:
           if (qr.rem == 0) {
             luaPushCells(L, telemetrySensor, telemetryItems[qr.quot]);
@@ -584,6 +587,7 @@ or a name (string) of the source.
 @retval value current source value (number). Zero is returned for:
  * non-existing sources
  * for all telemetry source when the telemetry stream is not received
+ * far all non allowed sensors while FAI MODE is active
 
 @retval table GPS position is returned in a table:
  * `lat` (number) latitude, positive is North
@@ -659,16 +663,22 @@ Return the internal GPS position or nil if no valid hardware found
  * `lon` (number) internal GPS longitude, positive is East
  * 'numsat' (number) current number of sats locked in by the GPS sensor
  * 'fix' (boolean) fix status
+ * 'alt' (number) internal GPS altitude in 0.1m
+ * 'speed' (number) internal GPSspeed in 0.1m/s
+ * 'heading'  (number) internal GPS ground course estimation in degrees * 10
 
 @status current Introduced in 2.2.2
 */
 static int luaGetTxGPS(lua_State * L)
 {
 #if defined(INTERNAL_GPS)
-  lua_createtable(L, 0, 4);
+  lua_createtable(L, 0, 7);
   lua_pushtablenumber(L, "lat", gpsData.latitude * 0.000001);
   lua_pushtablenumber(L, "lon", gpsData.longitude * 0.000001);
-  lua_pushtablenumber(L, "numsat", gpsData.numSat);
+  lua_pushtableinteger(L, "numsat", gpsData.numSat);
+  lua_pushtableinteger(L, "alt", gpsData.altitude);
+  lua_pushtableinteger(L, "speed", gpsData.speed);
+  lua_pushtableinteger(L, "heading", gpsData.groundCourse);
   if (gpsData.fix)
     lua_pushtableboolean(L, "fix", true);
   else
@@ -897,9 +907,10 @@ Returns (some of) the general radio settings
  IMPERIAL units
  * `language` (string) radio language (used for menus)
  * `voice` (string) voice language (used for speech)
+ * `gtimer` (number) radio global timer in seconds (does not include current session)
 
 @status current Introduced in 2.0.6, `imperial` added in TODO,
-`language` and `voice` added in 2.2.0.
+`language` and `voice` added in 2.2.0, gtimer added in 2.2.2.
 
 */
 static int luaGetGeneralSettings(lua_State * L)
@@ -911,6 +922,7 @@ static int luaGetGeneralSettings(lua_State * L)
   lua_pushtableinteger(L, "imperial", g_eeGeneral.imperial);
   lua_pushtablestring(L, "language", TRANSLATIONS);
   lua_pushtablestring(L, "voice", currentLanguagePack->id);
+  lua_pushtableinteger(L, "gtimer", g_eeGeneral.globalTimer);
   return 1;
 }
 
@@ -1252,6 +1264,20 @@ static int luaGetUsage(lua_State * L)
   return 1;
 }
 
+/*luadoc
+@function resetGlobalTimer()
+
+Resets the radio global timer to 0.
+
+@status current Introduced in 2.2.2
+*/
+static int luaResetGlobalTimer(lua_State * L)
+{
+  g_eeGeneral.globalTimer = 0;
+  storageDirty(EE_GENERAL);
+  return 0;
+}
+
 const luaL_Reg opentxLib[] = {
   { "getTime", luaGetTime },
   { "getDateTime", luaGetDateTime },
@@ -1279,6 +1305,7 @@ const luaL_Reg opentxLib[] = {
   { "killEvents", luaKillEvents },
   { "loadScript", luaLoadScript },
   { "getUsage", luaGetUsage },
+  { "resetGlobalTimer", luaResetGlobalTimer },
 #if LCD_DEPTH > 1 && !defined(COLORLCD)
   { "GREY", luaGrey },
 #endif

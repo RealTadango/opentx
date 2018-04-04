@@ -27,6 +27,9 @@
 #include <stdlib.h>
 #include "definitions.h"
 #include "opentx_types.h"
+#if defined(STM32)
+#include "usbd_conf.h"
+#endif
 
 #if defined(SIMU)
   #define SWITCH_SIMU(a, b)  (a)
@@ -228,7 +231,11 @@
   #define IF_FAI_CHOICE(x)
 #endif
 
-#define IS_FAI_FORBIDDEN(idx) (IS_FAI_ENABLED() && idx >= MIXSRC_FIRST_TELEM)
+#if defined(CPUARM)
+  #define IS_FAI_FORBIDDEN(idx) (IS_FAI_ENABLED() &&  isFaiForbidden(idx))
+#else
+  #define IS_FAI_FORBIDDEN(idx) (IS_FAI_ENABLED() && idx >= MIXSRC_FIRST_TELEM)
+#endif
 
 #if defined(BLUETOOTH)
 #if defined(X9E) && !defined(USEHORUSBT)
@@ -329,6 +336,12 @@ void memswap(void * a, void * b, uint8_t size);
   #define IS_POT_WITHOUT_DETENT(x)     (true)
   #define IS_POT_SLIDER_AVAILABLE(x)   (true)
   #define IS_MULTIPOS_CALIBRATED(cal)  (false)
+#endif
+
+#if defined(VIRTUAL_INPUTS)
+  #define IS_THROTTLE_TRIM(x)          (x == virtualInputsTrims[THR_STICK])
+#else
+  #define IS_THROTTLE_TRIM(x)          (x == THR_STICK)
 #endif
 
 #if defined(PWR_BUTTON_PRESS)
@@ -1325,6 +1338,10 @@ enum AUDIO_SOUNDS {
 #if defined(PCBTARANIS) || defined(PCBHORUS)
   AU_POT1_MIDDLE,
   AU_POT2_MIDDLE,
+#if defined(PCBX9E)
+  AU_POT3_MIDDLE,
+  AU_POT4_MIDDLE,
+#endif
   AU_SLIDER1_MIDDLE,
   AU_SLIDER2_MIDDLE,
 #if defined(PCBX9E)
@@ -1495,16 +1512,15 @@ union ReusableBuffer
   } sdmanager;
 #endif
 
-#if defined(STM32)
-  struct
-  {
-    char id[27];
-  } version;
-#endif
   struct
   {
     uint8_t stickMode;
   } generalSettings;
+
+#if defined(STM32)
+  // Data for the USB mass storage driver. If USB mass storage runs no menu is not allowed to be displayed
+  uint8_t MSC_BOT_Data[MSC_MEDIA_PACKET];
+#endif
 };
 
 extern union ReusableBuffer reusableBuffer;

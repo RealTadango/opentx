@@ -64,6 +64,9 @@ enum MenuModelSetupItems {
   ITEM_MODEL_INTERNAL_MODULE_CHANNELS,
   ITEM_MODEL_INTERNAL_MODULE_BIND,
   ITEM_MODEL_INTERNAL_MODULE_FAILSAFE,
+#if defined(PCBXLITE)
+  ITEM_MODEL_INTERNAL_MODULE_ANTENNA,
+#endif
 #endif
 #if defined(CPUARM)
   ITEM_MODEL_EXTERNAL_MODULE_LABEL,
@@ -176,6 +179,9 @@ enum MenuModelSetupItems {
 #elif defined(CPUM64)
   #define CURSOR_ON_CELL                 (true)
   #define MODEL_SETUP_MAX_LINES          ((IS_PPM_PROTOCOL(protocol)||IS_DSM2_PROTOCOL(protocol)||IS_PXX_PROTOCOL(protocol)) ? HEADER_LINE+ITEM_MODEL_SETUP_MAX : HEADER_LINE+ITEM_MODEL_SETUP_MAX-1)
+#elif defined(PCBXLITE)
+  #define CURSOR_ON_CELL                 (menuHorizontalPosition >= 0)
+  #define MODEL_SETUP_MAX_LINES          ((IS_PPM_PROTOCOL(protocol)||IS_DSM2_PROTOCOL(protocol)||IS_PXX_PROTOCOL(protocol)) ? HEADER_LINE+ITEM_MODEL_SETUP_MAX : HEADER_LINE+ITEM_MODEL_SETUP_MAX-1)
 #else
   #define CURSOR_ON_CELL                 (true)
   #define MODEL_SETUP_MAX_LINES          ((IS_PPM_PROTOCOL(protocol)||IS_DSM2_PROTOCOL(protocol)||IS_PXX_PROTOCOL(protocol)) ? HEADER_LINE+ITEM_MODEL_SETUP_MAX : HEADER_LINE+ITEM_MODEL_SETUP_MAX-1)
@@ -233,6 +239,14 @@ void onBindMenu(const char * result)
 
 void menuModelSetup(event_t event)
 {
+#if defined(PCBXLITE)
+  // Switch to external antenna confirmation
+  if (warningResult) {
+    warningResult = 0;
+    g_model.moduleData[INTERNAL_MODULE].pxx.external_antenna = XJT_EXTERNAL_ANTENNA;
+  }
+#endif
+
 #if defined(PCBTARANIS)
   MENU_TAB({ HEADER_LINE_COLUMNS 0, TIMER_ROWS, TIMER_ROWS, TIMER_ROWS, 0, 1, 0, 0, 0, 0, 0, CASE_CPUARM(LABEL(PreflightCheck)) CASE_CPUARM(0) 0, NUM_SWITCHES-1,  NUM_POTS, NUM_STICKS+NUM_POTS+NUM_SLIDERS+NUM_ROTARY_ENCODERS-1, 0,
   LABEL(InternalModule),
@@ -240,6 +254,9 @@ void menuModelSetup(event_t event)
   INTERNAL_MODULE_CHANNELS_ROWS,
   IF_INTERNAL_MODULE_ON(HAS_RF_PROTOCOL_MODELINDEX(g_model.moduleData[INTERNAL_MODULE].rfProtocol) ? (uint8_t)2 : (uint8_t)1),
   IF_INTERNAL_MODULE_ON(FAILSAFE_ROWS(INTERNAL_MODULE)),
+#if defined(PCBXLITE)
+  IF_INTERNAL_MODULE_ON(0),
+#endif
   LABEL(ExternalModule),
   EXTERNAL_MODULE_MODE_ROWS,
   MULTIMODULE_SUBTYPE_ROWS(EXTERNAL_MODULE)
@@ -1003,8 +1020,9 @@ void menuModelSetup(event_t event)
             lcdDrawTextAlignedLeft(y, STR_RECEIVER_NUM);
           }
           if (IS_MODULE_PXX(moduleIdx) || IS_MODULE_DSM2(moduleIdx) || IS_MODULE_MULTIMODULE(moduleIdx)) {
-            if (xOffsetBind) lcdDrawNumber(MODEL_SETUP_2ND_COLUMN, y, g_model.header.modelId[moduleIdx], (l_posHorz==0 ? attr : 0) | LEADING0|LEFT, 2);
-            if (attr && l_posHorz==0) {
+            if (xOffsetBind)
+              lcdDrawNumber(MODEL_SETUP_2ND_COLUMN, y, g_model.header.modelId[moduleIdx], (l_posHorz==0 ? attr : 0) | LEADING0|LEFT, 2);
+            if (attr && l_posHorz == 0) {
               if (editMode>0 || p1valdiff) {
                 CHECK_INCDEC_MODELVAR_ZERO(event, g_model.header.modelId[moduleIdx], MAX_RX_NUM(moduleIdx));
                 if (checkIncDec_Ret) {
@@ -1021,7 +1039,7 @@ void menuModelSetup(event_t event)
 #if defined(MULTIMODULE)
             if (multiBindStatus == MULTI_BIND_FINISHED) {
               multiBindStatus = MULTI_NORMAL_OPERATION;
-              s_editMode=0;
+              s_editMode = 0;
             }
 #endif
 #if defined(PCBTARANIS)
@@ -1029,7 +1047,8 @@ void menuModelSetup(event_t event)
               if (s_editMode > 0) {
                 if (l_posHorz == 1) {
                   if (IS_MODULE_R9M(moduleIdx) || (IS_MODULE_XJT(moduleIdx) && g_model.moduleData[moduleIdx].rfProtocol== RF_PROTO_X16)) {
-                    if (event == EVT_KEY_BREAK(KEY_ENTER)) {
+                    if (EVT_KEY_MASK(event) == KEY_ENTER) {
+                      killEvents(event);
                       uint8_t default_selection;
                       if (IS_MODULE_R9M_LBT(moduleIdx)) {
                         POPUP_MENU_ADD_ITEM(STR_BINDING_25MW_CH1_8_TELEM_OFF);
@@ -1134,6 +1153,21 @@ void menuModelSetup(event_t event)
       }
       break;
 
+#if defined(PCBXLITE)
+      case ITEM_MODEL_INTERNAL_MODULE_ANTENNA:
+      {
+        uint8_t newAntennaSel = editChoice(MODEL_SETUP_2ND_COLUMN, y, STR_ANTENNASELECTION, STR_VANTENNATYPES, g_model.moduleData[INTERNAL_MODULE].pxx.external_antenna, 0, 1, attr, event);
+        if (newAntennaSel != g_model.moduleData[INTERNAL_MODULE].pxx.external_antenna && newAntennaSel == XJT_EXTERNAL_ANTENNA) {
+          POPUP_CONFIRMATION(STR_ANTENNACONFIRM1);
+          const char * w = STR_ANTENNACONFIRM2;
+          SET_WARNING_INFO(w, strlen(w), 0);
+        }
+        else {
+          g_model.moduleData[INTERNAL_MODULE].pxx.external_antenna = newAntennaSel;
+        }
+        break;
+      }
+#endif
       case ITEM_MODEL_EXTERNAL_MODULE_OPTIONS:
       {
         uint8_t moduleIdx = CURRENT_MODULE_EDITED(k);

@@ -420,8 +420,7 @@ void menuMainView(event_t event)
 
     case EVT_KEY_TELEMETRY:
 #if defined(TELEMETRY_FRSKY)
-      if (!IS_FAI_ENABLED())
-        chainMenu(menuViewTelemetryFrsky);
+      chainMenu(menuViewTelemetryFrsky);
 #elif defined(TELEMETRY_JETI)
       JETI_EnableRXD(); // enable JETI-Telemetry reception
       chainMenu(menuViewTelemetryJeti);
@@ -634,9 +633,16 @@ void menuMainView(event_t event)
     warningText = STR_GLOBAL_VAR;
     drawMessageBox();
     lcdDrawSizedText(16, 5*FH, g_model.gvars[gvarLastChanged].name, LEN_GVAR_NAME, ZCHAR);
-    lcdDrawText(16+7*FW, 5*FH, PSTR("[\010]"), BOLD);
-
-    lcdDrawNumber(16+7*FW+4*FW+FW/2, 5*FH, GVAR_VALUE(gvarLastChanged, getGVarFlightMode(mixerCurrentFlightMode, gvarLastChanged)), BOLD);
+    lcdDrawText(16+6*FW, 5*FH, PSTR("["), BOLD);
+#if defined(CPUARM)
+    drawGVarValue(lcdLastRightPos, 5*FH, gvarLastChanged, GVAR_VALUE(gvarLastChanged, getGVarFlightMode(mixerCurrentFlightMode, gvarLastChanged)), LEFT|BOLD);
+    if (g_model.gvars[gvarLastChanged].unit) {
+      lcdDrawText(lcdLastRightPos, 5*FH, "%", BOLD);
+    }
+#else
+    lcdDrawNumber(lcdLastRightPos, 5*FH, GVAR_VALUE(gvarLastChanged, getGVarFlightMode(mixerCurrentFlightMode, gvarLastChanged)), BOLD);
+#endif
+    lcdDrawText(lcdLastRightPos, 5*FH, PSTR("]"), BOLD);
     warningText = NULL;
   }
 #endif

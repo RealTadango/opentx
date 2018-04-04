@@ -49,7 +49,12 @@ uint8_t heartbeat;
 safetych_t safetyCh[MAX_OUTPUT_CHANNELS];
 #endif
 
-union ReusableBuffer reusableBuffer;
+// __DMA for the MSC_BOT_Data member
+union ReusableBuffer reusableBuffer __DMA;
+
+#if defined(STM32)
+uint8_t* MSC_BOT_Data = reusableBuffer.MSC_BOT_Data;
+#endif
 
 const pm_uint8_t bchout_ar[] PROGMEM = {
     0x1B, 0x1E, 0x27, 0x2D, 0x36, 0x39,
@@ -1177,6 +1182,9 @@ void checkTHR()
   evalInputs(e_perout_mode_notrainer); // let do evalInputs do the job
 
   int16_t v = calibratedAnalogs[thrchn];
+  if (g_model.thrTraceSrc && g_model.throttleReversed) { //TODO : proper review of THR source definition and handling
+    v = -v;
+  }
   if (v <= THRCHK_DEADBAND-1024) {
     return; // prevent warning if throttle input OK
   }
@@ -1196,6 +1204,9 @@ void checkTHR()
     evalInputs(e_perout_mode_notrainer); // let do evalInputs do the job
 
     v = calibratedAnalogs[thrchn];
+    if (g_model.thrTraceSrc && g_model.throttleReversed) { //TODO : proper review of THR source definition and handling
+      v = -v;
+    }
 
 #if defined(PWR_BUTTON_PRESS)
     uint32_t pwr_check = pwrCheck();
@@ -1341,7 +1352,7 @@ uint8_t checkTrim(event_t event)
 #else
       before = getRawTrimValue(phase, idx);
 #endif
-      thro = (idx==THR_STICK && g_model.thrTrim);
+      thro = (IS_THROTTLE_TRIM(idx) && g_model.thrTrim);
     }
 #else
     phase = getTrimFlightMode(mixerCurrentFlightMode, idx);
@@ -1350,7 +1361,7 @@ uint8_t checkTrim(event_t event)
 #else
     before = getRawTrimValue(phase, idx);
 #endif
-    thro = (idx==THR_STICK && g_model.thrTrim);
+    thro = (IS_THROTTLE_TRIM(idx) && g_model.thrTrim);
 #endif
     int8_t trimInc = g_model.trimInc + 1;
     int8_t v = (trimInc==-1) ? min(32, abs(before)/4+1) : (1 << trimInc); // TODO flash saving if (trimInc < 0)
@@ -2597,7 +2608,7 @@ void opentxInit(OPENTX_INIT_ARGS)
   }
 
 #if NUM_PWMANALOGS > 0
-  pwmCheck();
+  analogPwmCheck();
 #endif
 
   if (!unexpectedShutdown) {
@@ -2816,10 +2827,13 @@ uint32_t pwrCheck()
 #endif
           lcdRefreshWait();
           lcdClear();
-          POPUP_CONFIRMATION("Confirm Shutdown");
+
+          POPUP_CONFIRMATION(STR_MODEL_SHUTDOWN);
+          SET_WARNING_INFO(STR_MODEL_STILL_POWERED, sizeof(TR_MODEL_STILL_POWERED), 0);
           event_t evt = getEvent(false);
           DISPLAY_WARNING(evt);
           lcdRefresh();
+          
           if (warningResult) {
             pwr_check_state = PWR_CHECK_OFF;
             return e_power_off;
