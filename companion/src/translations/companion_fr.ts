@@ -11,7 +11,7 @@
     <message>
         <location filename="../wizarddialog.cpp" line="438"/>
         <source>Yes, controlled by a single channel</source>
-        <translation></translation>
+        <translation>Oui, contrôlés par 1 voie</translation>
     </message>
     <message>
         <location filename="../wizarddialog.cpp" line="439"/>
@@ -749,7 +749,7 @@ Peut être différente de la langue du firmware</translation>
     <message>
         <location filename="../firmwares/boards.cpp" line="311"/>
         <source>Ail</source>
-        <translation>Ail</translation>
+        <translation></translation>
     </message>
 </context>
 <context>
@@ -803,22 +803,22 @@ Peut être différente de la langue du firmware</translation>
     <message>
         <location filename="../modeledit/channels.cpp" line="109"/>
         <source>Min</source>
-        <translation>Min</translation>
+        <translation></translation>
     </message>
     <message>
         <location filename="../modeledit/channels.cpp" line="109"/>
         <source>Max</source>
-        <translation>Max</translation>
+        <translation></translation>
     </message>
     <message>
         <location filename="../modeledit/channels.cpp" line="109"/>
         <source>Subtrim</source>
-        <translation>Subtrim</translation>
+        <translation></translation>
     </message>
     <message>
         <location filename="../modeledit/channels.cpp" line="109"/>
         <source>Direction</source>
-        <translation>Direction</translation>
+        <translation></translation>
     </message>
     <message>
         <location filename="../modeledit/channels.cpp" line="111"/>
@@ -1378,12 +1378,12 @@ Voulez-vous les importer ?</translation>
     <message>
         <location filename="../firmwares/customfunctiondata.cpp" line="42"/>
         <source>GF</source>
-        <translation></translation>
+        <translation>FG</translation>
     </message>
     <message>
         <location filename="../firmwares/customfunctiondata.cpp" line="42"/>
         <source>SF</source>
-        <translation></translation>
+        <translation>FS</translation>
     </message>
     <message>
         <location filename="../firmwares/customfunctiondata.cpp" line="48"/>
@@ -1503,12 +1503,12 @@ Voulez-vous les importer ?</translation>
     <message>
         <location filename="../firmwares/customfunctiondata.cpp" line="94"/>
         <source>SetFailsafe Int. Module</source>
-        <translation>Déf. failsafe module interne</translation>
+        <translation>Définir failsafe module interne</translation>
     </message>
     <message>
         <location filename="../firmwares/customfunctiondata.cpp" line="96"/>
         <source>SetFailsafe Ext. Module</source>
-        <translation>Déf. failsafe module externe</translation>
+        <translation>Définir failsafe module externe</translation>
     </message>
     <message>
         <location filename="../firmwares/customfunctiondata.cpp" line="98"/>
@@ -1615,7 +1615,7 @@ Voulez-vous les importer ?</translation>
     <message>
         <location filename="../firmwares/customfunctiondata.cpp" line="248"/>
         <source>CFN</source>
-        <translation></translation>
+        <translation>FPN</translation>
     </message>
 </context>
 <context>
@@ -4370,7 +4370,7 @@ Mode 4:
     <message>
         <location filename="../generaledit/generalsetup.ui" line="1174"/>
         <source>RSSI Poweroff Warning</source>
-        <translation>Désactiver avertissement RSSI</translation>
+        <translation>Vérifier RSSI à l&apos;extinction</translation>
     </message>
     <message>
         <location filename="../generaledit/generalsetup.ui" line="2023"/>
@@ -7741,7 +7741,7 @@ Mixage actif par défaut si non-renseigné.</translation>
         <location filename="../modelprinter.cpp" line="975"/>
         <location filename="../modelprinter.cpp" line="1049"/>
         <source>OFF</source>
-        <translation>Eteint</translation>
+        <translation></translation>
     </message>
     <message>
         <location filename="../modelprinter.cpp" line="146"/>
@@ -9642,7 +9642,12 @@ Mixage actif par défaut si non-renseigné.</translation>
         <translation>Sorties Voies</translation>
     </message>
     <message>
-        <location filename="../simulation/radiooutputswidget.ui" line="191"/>
+        <location filename="../simulation/radiooutputswidget.ui" line="132"/>
+        <source>Mix Outputs</source>
+        <translation>Sorties Mixages</translation>
+    </message>
+    <message>
+        <location filename="../simulation/radiooutputswidget.ui" line="210"/>
         <source>L
 o
 g
@@ -9652,7 +9657,7 @@ c</source>
 L</translation>
     </message>
     <message>
-        <location filename="../simulation/radiooutputswidget.ui" line="268"/>
+        <location filename="../simulation/radiooutputswidget.ui" line="287"/>
         <source>G
 l
 o
@@ -9663,7 +9668,7 @@ l</source>
 G</translation>
     </message>
     <message>
-        <location filename="../simulation/radiooutputswidget.ui" line="343"/>
+        <location filename="../simulation/radiooutputswidget.ui" line="362"/>
         <source>C
 h
 a
@@ -9675,6 +9680,20 @@ s</source>
         <translation>V
 O
 I
+E</translation>
+    </message>
+    <message>
+        <location filename="../simulation/radiooutputswidget.ui" line="439"/>
+        <source>M
+i
+x
+e
+s</source>
+        <translation>M
+I
+X
+A
+G
 E</translation>
     </message>
 </context>

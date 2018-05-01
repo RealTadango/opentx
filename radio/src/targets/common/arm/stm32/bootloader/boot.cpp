@@ -256,13 +256,13 @@ int main()
   // init screen
   bootloaderInitScreen();
 
-#if defined(PWR_PRESS_BUTTON) or defined(PCBHORUS)
+#if defined(PWR_BUTTON_PRESS)
   // wait until power button is released
   while(pwrPressed()) {
-      wdt_reset();
+    wdt_reset();
   }
 #endif
-  
+
   for (;;) {
     wdt_reset();
 
@@ -507,9 +507,21 @@ int main()
     }
 
     if (state == ST_REBOOT) {
-        // Jump to proper application address
+
         lcdClear();
+        lcdRefresh();
+        lcdRefreshWait();
+
+#if !defined(EEPROM)
+        // Use jump on radios with emergency mode
+        // to avoid triggering it with a soft reset
+
+        // Jump to proper application address
         jumpTo(APP_START_ADDRESS);
+#else
+        // Use software reset everywhere else
+        NVIC_SystemReset();
+#endif
     }
   }
 

@@ -25,6 +25,19 @@ uint8_t g_moduleIdx;
 void menuModelFailsafe(event_t event);
 #endif
 
+#if defined(PCBTARANIS)
+uint8_t getSwitchWarningsCount()
+{
+  int count = 0;
+  for (int i=0; i<NUM_SWITCHES; ++i) {
+    if (SWITCH_WARNING_ALLOWED(i)) {
+      ++count;
+    }
+  }
+  return count;
+}
+#endif
+
 enum MenuModelSetupItems {
   ITEM_MODEL_NAME,
   ITEM_MODEL_TIMER1,
@@ -54,6 +67,7 @@ enum MenuModelSetupItems {
   ITEM_MODEL_THROTTLE_WARNING,
   ITEM_MODEL_SWITCHES_WARNING,
 #if defined(PCBTARANIS)
+  ITEM_MODEL_SWITCHES_WARNING2,
   ITEM_MODEL_POTS_WARNING,
 #endif
   ITEM_MODEL_BEEP_CENTER,
@@ -105,6 +119,11 @@ enum MenuModelSetupItems {
 #endif
   ITEM_MODEL_TRAINER_CHANNELS,
   ITEM_MODEL_TRAINER_PARAMS,
+#elif defined(PCBXLITE)
+  ITEM_MODEL_TRAINER_LABEL,
+  ITEM_MODEL_TRAINER_MODE,
+  ITEM_MODEL_TRAINER_BLUETOOTH,
+  ITEM_MODEL_TRAINER_CHANNELS,
 #endif
   ITEM_MODEL_SETUP_MAX
 };
@@ -120,9 +139,7 @@ enum MenuModelSetupItems {
 #define MODEL_SETUP_RANGE_OFS            4*FW+3
 #define MODEL_SETUP_SET_FAILSAFE_OFS     7*FW-2
 
-#if defined(PCBXLITE)
-  #define CURRENT_MODULE_EDITED(k)       (k>=ITEM_MODEL_EXTERNAL_MODULE_LABEL ? EXTERNAL_MODULE : INTERNAL_MODULE)
-#elif defined(PCBX7)
+#if defined(PCBTARANIS)
   #define CURRENT_MODULE_EDITED(k)       (k>=ITEM_MODEL_TRAINER_LABEL ? TRAINER_MODULE : (k>=ITEM_MODEL_EXTERNAL_MODULE_LABEL ? EXTERNAL_MODULE : INTERNAL_MODULE))
 #elif defined(PCBSKY9X) && !defined(REVA)
   #define CURRENT_MODULE_EDITED(k)       (k>=ITEM_MODEL_EXTRA_MODULE_LABEL ? EXTRA_MODULE : EXTERNAL_MODULE)
@@ -131,7 +148,7 @@ enum MenuModelSetupItems {
 #endif
 
 #if defined(CPUARM)
-
+  #define SW_WARN_ROWS                    uint8_t(NAVIGATION_LINE_BY_LINE|(getSwitchWarningsCount()-1)), uint8_t(getSwitchWarningsCount() > 5 ? TITLE_ROW : HIDDEN_ROW)
 #if !defined(TARANIS_INTERNAL_PPM)
   #define INTERNAL_MODULE_MODE_ROWS       0 // (OFF / RF protocols)
 #else
@@ -172,6 +189,13 @@ enum MenuModelSetupItems {
 #define TRAINER_CHANNELS_ROW             (IS_SLAVE_TRAINER() ? (uint8_t)1 : HIDDEN_ROW)
 #define TRAINER_PARAMS_ROW               (IS_SLAVE_TRAINER() ? (uint8_t)2 : HIDDEN_ROW)
 #define TRAINER_ROWS                     LABEL(Trainer), 0, TRAINER_BLUETOOTH_ROW TRAINER_CHANNELS_ROW, TRAINER_PARAMS_ROW
+#elif defined(PCBXLITE)
+  #define IF_BT_TRAINER_ON(x)            (g_eeGeneral.bluetoothMode == BLUETOOTH_TRAINER ? (uint8_t)(x) : HIDDEN_ROW)
+  #define TRAINER_BLUETOOTH_M_ROW        ((bluetoothDistantAddr[0] == '\0' || bluetoothState == BLUETOOTH_STATE_CONNECTED) ? (uint8_t)0 : (uint8_t)1)
+  #define TRAINER_BLUETOOTH_S_ROW        (bluetoothDistantAddr[0] == '\0' ? HIDDEN_ROW : LABEL())
+  #define TRAINER_BLUETOOTH_ROW          (g_model.trainerMode == TRAINER_MODE_MASTER_BLUETOOTH ? TRAINER_BLUETOOTH_M_ROW : (g_model.trainerMode == TRAINER_MODE_SLAVE_BLUETOOTH ? TRAINER_BLUETOOTH_S_ROW : HIDDEN_ROW))
+  #define TRAINER_CHANNELS_ROW           (IS_SLAVE_TRAINER() ? (uint8_t)1 : HIDDEN_ROW)
+  #define TRAINER_ROWS                   IF_BT_TRAINER_ON(LABEL(Trainer)), IF_BT_TRAINER_ON(0), IF_BT_TRAINER_ON(TRAINER_BLUETOOTH_ROW), IF_BT_TRAINER_ON(TRAINER_CHANNELS_ROW)
 #else
   #define TRAINER_ROWS
 #endif
@@ -247,16 +271,35 @@ void menuModelSetup(event_t event)
   }
 #endif
 
-#if defined(PCBTARANIS)
-  MENU_TAB({ HEADER_LINE_COLUMNS 0, TIMER_ROWS, TIMER_ROWS, TIMER_ROWS, 0, 1, 0, 0, 0, 0, 0, CASE_CPUARM(LABEL(PreflightCheck)) CASE_CPUARM(0) 0, NUM_SWITCHES-1,  NUM_POTS, NUM_STICKS+NUM_POTS+NUM_SLIDERS+NUM_ROTARY_ENCODERS-1, 0,
+#if defined(PCBXLITE)
+  MENU_TAB({ HEADER_LINE_COLUMNS 0, TIMER_ROWS, TIMER_ROWS, TIMER_ROWS, 0, 1, 0, 0, 0, 0, 0, CASE_CPUARM(LABEL(PreflightCheck)) CASE_CPUARM(0) 0, SW_WARN_ROWS,  NUM_POTS, NUM_STICKS + NUM_POTS + NUM_SLIDERS + NUM_ROTARY_ENCODERS - 1, 0,
+    LABEL(InternalModule),
+    INTERNAL_MODULE_MODE_ROWS,
+    INTERNAL_MODULE_CHANNELS_ROWS,
+    IF_INTERNAL_MODULE_ON(HAS_RF_PROTOCOL_MODELINDEX(g_model.moduleData[INTERNAL_MODULE].rfProtocol) ? (uint8_t)2 : (uint8_t)1),
+    IF_INTERNAL_MODULE_ON(FAILSAFE_ROWS(INTERNAL_MODULE)),
+    IF_INTERNAL_MODULE_ON(0),
+    LABEL(ExternalModule),
+    EXTERNAL_MODULE_MODE_ROWS,
+    MULTIMODULE_SUBTYPE_ROWS(EXTERNAL_MODULE)
+    MULTIMODULE_STATUS_ROWS
+    EXTERNAL_MODULE_CHANNELS_ROWS,
+    EXTERNAL_MODULE_BIND_ROWS(),
+    OUTPUT_TYPE_ROWS()
+    FAILSAFE_ROWS(EXTERNAL_MODULE),
+    EXTERNAL_MODULE_OPTION_ROW,
+    (IS_MODULE_R9M_LBT(EXTERNAL_MODULE) ? (uint8_t)0 : HIDDEN_ROW),
+    MULTIMODULE_MODULE_ROWS
+    EXTERNAL_MODULE_POWER_ROW,
+    EXTRA_MODULE_ROWS
+    TRAINER_ROWS });
+#elif defined(PCBTARANIS)
+  MENU_TAB({ HEADER_LINE_COLUMNS 0, TIMER_ROWS, TIMER_ROWS, TIMER_ROWS, 0, 1, 0, 0, 0, 0, 0, CASE_CPUARM(LABEL(PreflightCheck)) CASE_CPUARM(0) 0, SW_WARN_ROWS, NUM_POTS, NUM_STICKS+NUM_POTS+NUM_SLIDERS+NUM_ROTARY_ENCODERS-1, 0,
   LABEL(InternalModule),
   INTERNAL_MODULE_MODE_ROWS,
   INTERNAL_MODULE_CHANNELS_ROWS,
   IF_INTERNAL_MODULE_ON(HAS_RF_PROTOCOL_MODELINDEX(g_model.moduleData[INTERNAL_MODULE].rfProtocol) ? (uint8_t)2 : (uint8_t)1),
   IF_INTERNAL_MODULE_ON(FAILSAFE_ROWS(INTERNAL_MODULE)),
-#if defined(PCBXLITE)
-  IF_INTERNAL_MODULE_ON(0),
-#endif
   LABEL(ExternalModule),
   EXTERNAL_MODULE_MODE_ROWS,
   MULTIMODULE_SUBTYPE_ROWS(EXTERNAL_MODULE)
@@ -541,7 +584,86 @@ void menuModelSetup(event_t event)
         g_model.disableThrottleWarning = !editCheckBox(!g_model.disableThrottleWarning, MODEL_SETUP_2ND_COLUMN, y, STR_THROTTLEWARNING, attr, event);
         break;
 
+#if defined(PCBTARANIS)
+      case ITEM_MODEL_SWITCHES_WARNING2:
+        if (i==0) {
+          if (CURSOR_MOVED_LEFT(event))
+            menuVerticalOffset--;
+          else
+            menuVerticalOffset++;
+        }
+        break;
+#endif
+
       case ITEM_MODEL_SWITCHES_WARNING:
+#if defined(PCBTARANIS)
+        {
+          #define FIRSTSW_STR   STR_VSRCRAW+(MIXSRC_FIRST_SWITCH-MIXSRC_Rud+1)*length
+          uint8_t length = pgm_read_byte(STR_VSRCRAW);
+          horzpos_t l_posHorz = menuHorizontalPosition;
+
+          if (i>=NUM_BODY_LINES-2 && getSwitchWarningsCount() > 5*(NUM_BODY_LINES-i)) {
+            if (CURSOR_MOVED_LEFT(event))
+              menuVerticalOffset--;
+            else
+              menuVerticalOffset++;
+            break;
+          }
+
+          swarnstate_t states = g_model.switchWarningState;
+          char c;
+
+          lcdDrawTextAlignedLeft(y, STR_SWITCHWARNING);
+#if defined(PCBXLITE)
+          lcdDrawText(LCD_W, y, "<]", RIGHT);
+          if (menuHorizontalPosition > NUM_SWITCHES) menuHorizontalPosition = NUM_SWITCHES;
+          if ((attr) && (menuHorizontalPosition == NUM_SWITCHES)) {
+#else
+          if (attr) {
+#endif
+            s_editMode = 0;
+            if (!READ_ONLY()) {
+              switch (event) {
+                case EVT_KEY_BREAK(KEY_ENTER):
+                  break;
+
+                case EVT_KEY_LONG(KEY_ENTER):
+                  if (menuHorizontalPosition < 0 || menuHorizontalPosition >= NUM_SWITCHES) {
+                    START_NO_HIGHLIGHT();
+                    getMovedSwitch();
+                    g_model.switchWarningState = switches_states;
+                    AUDIO_WARNING1();
+                    storageDirty(EE_MODEL);
+                  }
+                  killEvents(event);
+                  break;
+              }
+            }
+          }
+
+          LcdFlags line = attr;
+
+          int current = 0;
+          for (int i=0; i<NUM_SWITCHES; i++) {
+            if (SWITCH_WARNING_ALLOWED(i)) {
+              div_t qr = div(current, 5);
+              if (!READ_ONLY() && event==EVT_KEY_BREAK(KEY_ENTER) && line && l_posHorz==current) {
+                g_model.switchWarningEnable ^= (1 << i);
+                storageDirty(EE_MODEL);
+              }
+              uint8_t swactive = !(g_model.switchWarningEnable & (1<<i));
+              c = "\300-\301"[states & 0x03];
+              //lcdDrawChar(MODEL_SETUP_2ND_COLUMN+qr.rem*(2*FW+1), y+FH*qr.quot, 'A'+i, line && (menuHorizontalPosition==current) ? INVERS : 0);
+              lcdDrawSizedText(MODEL_SETUP_2ND_COLUMN + qr.rem*((2*FW)+1), y+FH*qr.quot, FIRSTSW_STR+(i*length)+3, 1, line && (menuHorizontalPosition==current) ? INVERS : 0);
+              if (swactive) lcdDrawChar(lcdNextPos, y+FH*qr.quot, c);
+              ++current;
+            }
+            states >>= 2;
+          }
+          if (attr && ((menuHorizontalPosition < 0) || menuHorizontalPosition >= NUM_SWITCHES)) {
+            lcdDrawFilledRect(MODEL_SETUP_2ND_COLUMN-1, y-1, 8*(2*FW+1), 1+FH*((current+4)/5));
+          }
+#else
       {
         lcdDrawTextAlignedLeft(y, STR_SWITCHWARNING);
         swarnstate_t states = g_model.switchWarningState;
@@ -556,13 +678,8 @@ void menuModelSetup(event_t event)
                 g_model.switchWarningEnable ^= (1 << menuHorizontalPosition);
                 storageDirty(EE_MODEL);
 #else
-#if defined(PCBTARANIS)
-                if (menuHorizontalPosition < NUM_SWITCHES) {
-                  g_model.switchWarningEnable ^= (1 << (menuHorizontalPosition-1));
-#else
                 if (menuHorizontalPosition < NUM_SWITCHES-1) {
                   g_model.switchWarningEnable ^= (1 << menuHorizontalPosition);
-#endif
                   storageDirty(EE_MODEL);
                 }
 #endif
@@ -574,13 +691,6 @@ void menuModelSetup(event_t event)
                 g_model.switchWarningState = switches_states;
                 AUDIO_WARNING1();
                 storageDirty(EE_MODEL);
-#elif defined(PCBTARANIS)
-                if (attr && menuHorizontalPosition == 0) {
-                  getMovedSwitch();
-                  g_model.switchWarningState = switches_states;
-                  AUDIO_WARNING1();
-                  storageDirty(EE_MODEL);
-                }
 #else
                 if (menuHorizontalPosition == NUM_SWITCHES-1) {
                   START_NO_HIGHLIGHT();
@@ -596,23 +706,7 @@ void menuModelSetup(event_t event)
           }
         }
         LcdFlags line = attr;
-#if defined(PCBTARANIS)
-        int current = 0;
-        for (int i=0; i<NUM_SWITCHES-1; i++) {
-          if (SWITCH_WARNING_ALLOWED(i)) {
-            div_t qr = div(current, 8);
-            uint8_t swactive = !(g_model.switchWarningEnable & (1<<i));
-            c = "\300-\301"[states & 0x03];
-            lcdDrawChar(MODEL_SETUP_2ND_COLUMN+qr.rem*(2*FW), y, (i < 4 ? 'A'+i : 'B'+i), line && (menuHorizontalPosition-1==current) ? INVERS : 0);
-            if (swactive) lcdDrawChar(lcdNextPos, y, c);
-            ++current;
-          }
-          states >>= 2;
-        }
-        if (attr && menuHorizontalPosition == 0) {
-          lcdDrawFilledRect(MODEL_SETUP_2ND_COLUMN-1, y-1, (NUM_SWITCHES-1)*(2*FW), 1+FH*((current+7)/8));
-        }
-#else
+
         for (uint8_t i=0; i<NUM_SWITCHES-1/*not on TRN switch*/; i++) {
           uint8_t swactive = !(g_model.switchWarningEnable & 1 << i);
           attr = 0;
@@ -849,7 +943,7 @@ void menuModelSetup(event_t event)
       break;
 #endif
 
-#if defined(PCBX7)
+#if defined(PCBTARANIS)
       case ITEM_MODEL_TRAINER_LABEL:
         lcdDrawTextAlignedLeft(y, STR_TRAINER);
         break;
@@ -869,7 +963,7 @@ void menuModelSetup(event_t event)
         break;
 #endif
 
-#if defined(PCBX7) && defined(BLUETOOTH)
+#if defined(PCBTARANIS) && defined(BLUETOOTH)
       case ITEM_MODEL_TRAINER_BLUETOOTH:
         if (g_model.trainerMode == TRAINER_MODE_MASTER_BLUETOOTH) {
           if (attr) {
@@ -918,10 +1012,8 @@ void menuModelSetup(event_t event)
         break;
 #endif
 
-#if defined(PCBX7)
-      case ITEM_MODEL_TRAINER_CHANNELS:
-#endif
 #if defined(PCBTARANIS)
+      case ITEM_MODEL_TRAINER_CHANNELS:
       case ITEM_MODEL_INTERNAL_MODULE_CHANNELS:
 #endif
 #if defined(PCBSKY9X)
@@ -1142,9 +1234,18 @@ void menuModelSetup(event_t event)
             }
           } else if (menuHorizontalPosition == 1) {
             s_editMode = 0;
-            if (moduleData.failsafeMode == FAILSAFE_CUSTOM && event == EVT_KEY_FIRST(KEY_ENTER)) {
-              g_moduleIdx = moduleIdx;
-              pushMenu(menuModelFailsafe);
+            if (moduleData.failsafeMode == FAILSAFE_CUSTOM) {
+              if (event == EVT_KEY_LONG(KEY_ENTER)) {
+                killEvents(event);
+                setCustomFailsafe(moduleIdx);
+                storageDirty(EE_MODEL);
+                AUDIO_WARNING1();
+                SEND_FAILSAFE_NOW(moduleIdx);
+              }
+              else if (event == EVT_KEY_BREAK(KEY_ENTER)) {
+                g_moduleIdx = moduleIdx;
+                pushMenu(menuModelFailsafe);
+              }
             }
           } else {
             lcdDrawSolidFilledRect(MODEL_SETUP_2ND_COLUMN, y, LCD_W - MODEL_SETUP_2ND_COLUMN, 8);
@@ -1418,7 +1519,6 @@ void menuModelSetup(event_t event)
 #if defined(CPUARM)
 void menuModelFailsafe(event_t event)
 {
-  uint8_t ch = 8 * (menuVerticalPosition / 8);
   const uint8_t channelStart = g_model.moduleData[g_moduleIdx].channelsStart;
   const int lim = (g_model.extendedLimits ? (512 * LIMIT_EXT_PERCENT / 100) : 512) * 2;
   uint8_t wbar = LCD_W - FW * 4 - FWNUM * 4;
@@ -1429,37 +1529,44 @@ void menuModelFailsafe(event_t event)
   if (event == EVT_KEY_LONG(KEY_ENTER)) {
     killEvents(event);
     event = 0;
-    if (s_editMode) {
-      g_model.moduleData[g_moduleIdx].failsafeChannels[menuVerticalPosition] = channelOutputs[menuVerticalPosition+channelStart];
-      storageDirty(EE_MODEL);
-      AUDIO_WARNING1();
-      s_editMode = 0;
-      SEND_FAILSAFE_NOW(g_moduleIdx);
+
+    if (menuVerticalPosition < NUM_CHANNELS(g_moduleIdx)) {
+      if (s_editMode) {
+        g_model.moduleData[g_moduleIdx].failsafeChannels[menuVerticalPosition] = channelOutputs[menuVerticalPosition+channelStart];
+        s_editMode = 0;
+      }
+      else {
+        int16_t & failsafe = g_model.moduleData[g_moduleIdx].failsafeChannels[menuVerticalPosition];
+        if (failsafe < FAILSAFE_CHANNEL_HOLD)
+          failsafe = FAILSAFE_CHANNEL_HOLD;
+        else if (failsafe == FAILSAFE_CHANNEL_HOLD)
+          failsafe = FAILSAFE_CHANNEL_NOPULSE;
+        else
+          failsafe = 0;
+      }
     }
     else {
-      int16_t & failsafe = g_model.moduleData[g_moduleIdx].failsafeChannels[menuVerticalPosition];
-      if (failsafe < FAILSAFE_CHANNEL_HOLD)
-        failsafe = FAILSAFE_CHANNEL_HOLD;
-      else if (failsafe == FAILSAFE_CHANNEL_HOLD)
-        failsafe = FAILSAFE_CHANNEL_NOPULSE;
-      else
-        failsafe = 0;
-      storageDirty(EE_MODEL);
-      AUDIO_WARNING1();
-      SEND_FAILSAFE_NOW(g_moduleIdx);
+      // "Outputs => Failsafe" menu item
+      setCustomFailsafe(g_moduleIdx);
     }
+
+    storageDirty(EE_MODEL);
+    AUDIO_WARNING1();
+    SEND_FAILSAFE_NOW(g_moduleIdx);
   }
 
-  SIMPLE_SUBMENU_NOTITLE(NUM_CHANNELS(g_moduleIdx));
+  SIMPLE_SUBMENU_NOTITLE(NUM_CHANNELS(g_moduleIdx) + 1);
 
   lcdDrawTextAlignedCenter(0, FAILSAFESET);
   lcdInvertLine(0);
 
   const coord_t x = 1;
+  coord_t y = FH + 1;
+  uint8_t line = (menuVerticalPosition >= NUM_CHANNELS(g_moduleIdx) ? 2 : 0);
+  uint8_t ch = (menuVerticalPosition >= 8 ? 8 : 0) + line;
 
   // Channels
-  for (uint8_t line=0; line<8; line++) {
-    const coord_t y = 9+line*7;
+  for (; line < 8; line++) {
     const int32_t channelValue = channelOutputs[ch+channelStart];
     int32_t failsafeValue = g_model.moduleData[g_moduleIdx].failsafeChannels[ch];
 
@@ -1513,9 +1620,15 @@ void menuModelFailsafe(event_t event)
     lcdDrawSolidHorizontalLine(xFailsafe, y+3, lenFailsafe);
     lcdDrawSolidHorizontalLine(xFailsafe, y+4, lenFailsafe);
 
+    y += FH - 1;
+
     if (++ch >= NUM_CHANNELS(g_moduleIdx))
       break;
+  }
 
+  if (menuVerticalPosition >= NUM_CHANNELS(g_moduleIdx)) {
+    // Outputs => Failsafe
+    lcdDrawText(CENTER_OFS, LCD_H - (FH + 1), STR_OUTPUTS2FAILSAFE, INVERS);
   }
 }
 #endif

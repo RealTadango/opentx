@@ -261,7 +261,9 @@ void generalDefault()
   #endif
   g_eeGeneral.slidersConfig = 0x0f; // 4 sliders
   g_eeGeneral.blOffBright = 20;
-#elif defined(PCBX7) ||  defined(PCBXLITE)
+#elif defined(PCBXLITE)
+  g_eeGeneral.potsConfig = 0x0F;    // S1 and S2 = pot without detent
+#elif defined(PCBX7)
   g_eeGeneral.potsConfig = 0x07;    // S1 = pot without detent, S2 = pot with detent
 #elif defined(PCBTARANIS)
   g_eeGeneral.potsConfig = 0x05;    // S1 and S2 = pots with detent
@@ -269,32 +271,19 @@ void generalDefault()
 #endif
 
 #if defined(PCBXLITE)
-  g_eeGeneral.switchConfig = 0x0000000f; // 2x3POS
+  g_eeGeneral.switchConfig = (SWITCH_2POS << 6) + (SWITCH_2POS << 4) + (SWITCH_3POS << 2) + (SWITCH_3POS << 0); // 2x3POS, 2x2POS
 #elif defined(PCBX7)
   g_eeGeneral.switchConfig = 0x000006ff; // 4x3POS, 1x2POS, 1xTOGGLE
 #elif defined(PCBTARANIS) || defined(PCBHORUS)
   g_eeGeneral.switchConfig = 0x00007bff; // 6x3POS, 1x2POS, 1xTOGGLE
 #endif
 
-// vBatWarn is voltage in 100mV, vBatMin is in 100mV but with -9V offset, vBatMax has a -12V offset
-#if defined(PCBX9E) || defined(PCBX12S)
-  // NI-MH 9.6V
-  g_eeGeneral.vBatWarn = 87;
-  g_eeGeneral.vBatMin = -5;   //8,5V
-  g_eeGeneral.vBatMax = -5;   //11,5V
-#elif defined(PCBX10)
-  // Lipo 2V
-  g_eeGeneral.vBatWarn = 66;
-  g_eeGeneral.vBatMin = -28; // 6.2V
-  g_eeGeneral.vBatMax = -38;   // 8.2V
-#elif defined(PCBTARANIS)
-  // NI-MH 7.2V, X9D, X9D+ and X7
-  g_eeGeneral.vBatWarn = 65;
-  g_eeGeneral.vBatMin = -30; //6V
-  g_eeGeneral.vBatMax = -40; //8V
-#else
-  g_eeGeneral.vBatWarn = 90;
-#endif
+  // vBatWarn is voltage in 100mV, vBatMin is in 100mV but with -9V offset, vBatMax has a -12V offset
+  g_eeGeneral.vBatWarn = BATTERY_WARN;
+  if (BATTERY_MIN != 90)
+    g_eeGeneral.vBatMin = BATTERY_MIN - 90;
+  if (BATTERY_MAX != 120)
+    g_eeGeneral.vBatMax = BATTERY_MAX - 120;
 
 #if defined(DEFAULT_MODE)
   g_eeGeneral.stickMode = DEFAULT_MODE-1;
@@ -477,6 +466,10 @@ void modelDefault(uint8_t id)
   g_model.moduleData[INTERNAL_MODULE].channelsCount = DEFAULT_CHANNELS(INTERNAL_MODULE);
 #elif defined(PCBSKY9X)
   g_model.moduleData[EXTERNAL_MODULE].type = MODULE_TYPE_PPM;
+#endif
+
+#if defined(PCBXLITE)
+  g_model.trainerMode = TRAINER_MODE_MASTER_BLUETOOTH;
 #endif
 
 #if defined(CPUARM) && defined(EEPROM)
@@ -1268,7 +1261,7 @@ void alert(const pm_char * title, const pm_char * msg ALERT_SOUND_ARG)
   bool refresh = false;
 #endif
 
-  while(1) {
+  while (1) {
     SIMU_SLEEP(1);
 #if defined(CPUARM)
     CoTickDelay(10);
@@ -1283,6 +1276,7 @@ void alert(const pm_char * title, const pm_char * msg ALERT_SOUND_ARG)
 #if defined(PWR_BUTTON_PRESS)
     uint32_t pwr_check = pwrCheck();
     if (pwr_check == e_power_off) {
+      drawSleepBitmap();
       boardOff();
     }
     else if (pwr_check == e_power_press) {
@@ -1294,6 +1288,7 @@ void alert(const pm_char * title, const pm_char * msg ALERT_SOUND_ARG)
     }
 #else
     if (pwrCheck() == e_power_off) {
+      drawSleepBitmap();
       boardOff(); // turn power off now
     }
 #endif
@@ -1325,7 +1320,7 @@ uint8_t checkTrim(event_t event)
   if (k>=0 && k<8 && !IS_KEY_BREAK(event)) {
 #endif
     // LH_DWN LH_UP LV_DWN LV_UP RV_DWN RV_UP RH_DWN RH_UP
-    uint8_t idx = CONVERT_MODE((uint8_t)k/2);
+    uint8_t idx = CONVERT_MODE_TRIMS((uint8_t)k/2);
     uint8_t phase;
     int before;
     bool thro;
@@ -1366,6 +1361,9 @@ uint8_t checkTrim(event_t event)
     int8_t trimInc = g_model.trimInc + 1;
     int8_t v = (trimInc==-1) ? min(32, abs(before)/4+1) : (1 << trimInc); // TODO flash saving if (trimInc < 0)
     if (thro) v = 4; // if throttle trim and trim trottle then step=4
+#if defined(GVARS)
+    if (TRIM_REUSED(idx)) v = 1;
+#endif
     int16_t after = (k&1) ? before + v : before - v;   // positive = k&1
     bool beepTrim = false;
 
@@ -1375,35 +1373,57 @@ uint8_t checkTrim(event_t event)
       AUDIO_TRIM_MIDDLE();
       pauseEvents(event);
     }
-    else if (before>TRIM_MIN && after<=TRIM_MIN) {
-      beepTrim = true;
-      AUDIO_TRIM_MIN();
-      killEvents(event);
-    }
-    else if (before<TRIM_MAX && after>=TRIM_MAX) {
-      beepTrim = true;
-      AUDIO_TRIM_MAX();
-      killEvents(event);
-    }
-
-    if ((before<after && after>TRIM_MAX) || (before>after && after<TRIM_MIN)) {
-      if (!g_model.extendedTrims || TRIM_REUSED(idx)) after = before;
-    }
-
-    if (after < TRIM_EXTENDED_MIN) {
-      after = TRIM_EXTENDED_MIN;
-    }
-    if (after > TRIM_EXTENDED_MAX) {
-      after = TRIM_EXTENDED_MAX;
-    }
 
 #if defined(GVARS)
     if (TRIM_REUSED(idx)) {
-      SET_GVAR_VALUE(trimGvar[idx], phase, after);
+      int8_t gvar = trimGvar[idx];
+#if defined(CPUARM)
+      int16_t vmin = GVAR_MIN + g_model.gvars[gvar].min;
+      int16_t vmax = GVAR_MAX - g_model.gvars[gvar].max;
+#else
+      int16_t vmin = TRIM_MIN;
+      int16_t vmax = TRIM_MAX;
+#endif
+      if (after < vmin) {
+        after = vmin;
+        beepTrim = true;
+        AUDIO_TRIM_MIN();
+        killEvents(event);
+      }
+      else if (after > vmax) {
+        after = vmax;
+        beepTrim = true;
+        AUDIO_TRIM_MAX();
+        killEvents(event);
+      }
+
+      SET_GVAR_VALUE(gvar, phase, after);
     }
     else
 #endif
     {
+      if (before>TRIM_MIN && after<=TRIM_MIN) {
+        beepTrim = true;
+        AUDIO_TRIM_MIN();
+        killEvents(event);
+      }
+      else if (before<TRIM_MAX && after>=TRIM_MAX) {
+        beepTrim = true;
+        AUDIO_TRIM_MAX();
+        killEvents(event);
+      }
+
+      if ((before<after && after>TRIM_MAX) || (before>after && after<TRIM_MIN)) {
+        if (!g_model.extendedTrims) after = before;
+      }
+
+      if (after < TRIM_EXTENDED_MIN) {
+        after = TRIM_EXTENDED_MIN;
+      }
+      else if (after > TRIM_EXTENDED_MAX) {
+        after = TRIM_EXTENDED_MAX;
+      }
+
 #if defined(CPUARM)
       if (!setTrimValue(phase, idx, after)) {
         // we don't play a beep, so we exit now the function
@@ -2833,7 +2853,7 @@ uint32_t pwrCheck()
           event_t evt = getEvent(false);
           DISPLAY_WARNING(evt);
           lcdRefresh();
-          
+
           if (warningResult) {
             pwr_check_state = PWR_CHECK_OFF;
             return e_power_off;

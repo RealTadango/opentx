@@ -1,6 +1,7 @@
 option(SHUTDOWN_CONFIRMATION "Shutdown confirmation" OFF)
 option(LCD_DUAL_BUFFER "Dual LCD Buffer" OFF)
 option(TARANIS_INTERNAL_PPM "Taranis internal module hack to output PPM" OFF)
+option(USEHORUSBT "X9E BT module replaced by Horus BT module" OFF)
 
 if(PCB STREQUAL X9E)
   set(PWR_BUTTON "PRESS" CACHE STRING "Pwr button type (PRESS/SWITCH)")
@@ -75,6 +76,7 @@ elseif(PCB STREQUAL X7)
   set(LCD_DRIVER lcd_driver_spi.cpp)
   set(GVAR_SCREEN model_gvars.cpp)
 elseif(PCB STREQUAL XLITE)
+  set(PXX_FREQUENCY "HIGH" CACHE STRING "PXX frequency (LOW / HIGH)")
   set(PWR_BUTTON "PRESS" CACHE STRING "Pwr button type (PRESS/SWITCH)")
   set(CPU_TYPE STM32F2)
   set(CPU_TYPE_FULL STM32F205xE)  # for size report
@@ -83,7 +85,7 @@ elseif(PCB STREQUAL XLITE)
   set(LUA_EXPORT lua_export_xlite)
   set(FLAVOUR xlite)
   add_definitions(-DPCBXLITE -DSOFTWARE_VOLUME)
-  add_definitions(-DEEPROM_VARIANT=0x4000)
+  add_definitions(-DEEPROM_VARIANT=0x2000)
   add_definitions(-DPWR_BUTTON_${PWR_BUTTON})
   set(GUI_DIR 128x64)
   set(BITMAPS_TARGET 9x_bitmaps)
@@ -93,6 +95,9 @@ elseif(PCB STREQUAL XLITE)
 endif()
 
 if(PCB STREQUAL XLITE)
+  if(PXX_FREQUENCY STREQUAL HIGH)
+    add_definitions(-DPXX_FREQUENCY_HIGH)
+  endif()
   set(TARGET_SRC
     ${TARGET_SRC}
     ../common/arm/stm32/intmodule_serial_driver.cpp
@@ -185,5 +190,9 @@ endif()
 if(TARANIS_INTERNAL_PPM)
   add_definitions(-DTARANIS_INTERNAL_PPM)
 endif()
+
+if(USEHORUSBT)
+  add_definitions(-DUSEHORUSBT)
+endif(USEHORUSBT)
 
 set(FIRMWARE_DEPENDENCIES ${FIRMWARE_DEPENDENCIES} ${BITMAPS_TARGET})
