@@ -339,10 +339,10 @@ void watchdogInit(unsigned int duration);
 #define NUM_XPOTS                      NUM_POTS
 #if defined(PCBX10)
   #define NUM_SLIDERS                  2
-  #define NUM_PWMANALOGS               4
+  #define NUM_PWMSTICKS                4
 #else
   #define NUM_SLIDERS                  4
-  #define NUM_PWMANALOGS               0
+  #define NUM_PWMSTICKS                0
 #endif
 enum Analogs {
   STICK1,
@@ -408,12 +408,11 @@ uint16_t getAnalogValue(uint8_t index);
   #define NUM_DUMMY_ANAS               0
 #endif
 
-#if NUM_PWMANALOGS > 0
-extern uint8_t analogs_pwm_disabled;
-#define ANALOGS_PWM_ENABLED()          (analogs_pwm_disabled == false)
-void analogPwmInit(void);
-void analogPwmRead(uint16_t * values);
-void analogPwmCheck();
+#if NUM_PWMSTICKS > 0
+extern uint8_t sticks_pwm_disabled;
+#define STICKS_PWM_ENABLED()          (sticks_pwm_disabled == false)
+void sticksPwmInit(void);
+void sticksPwmRead(uint16_t * values);
 extern volatile uint32_t pwm_interrupt_count;
 #endif
 
@@ -421,8 +420,8 @@ extern volatile uint32_t pwm_interrupt_count;
 #if defined(PCBX10)
   // Lipo 2S
   #define BATTERY_WARN      66 // 6.6V
-  #define BATTERY_MIN       62 // 6.2V
-  #define BATTERY_MAX       82 // 8.2V
+  #define BATTERY_MIN       67 // 6.7V
+  #define BATTERY_MAX       83 // 8.3V
 #else
   // NI-MH 9.6V
   #define BATTERY_WARN      87 // 8.7V
@@ -541,8 +540,8 @@ void sportUpdatePowerOff(void);
 #define SPORT_UPDATE_POWER_ON()        sportUpdatePowerOn()
 #define SPORT_UPDATE_POWER_OFF()       sportUpdatePowerOff()
 #else
-#define SPORT_UPDATE_POWER_ON()        EXTERNAL_MODULE_ON()
-#define SPORT_UPDATE_POWER_OFF()       EXTERNAL_MODULE_OFF()
+#define SPORT_UPDATE_POWER_ON()
+#define SPORT_UPDATE_POWER_OFF()
 #endif
 
 // Haptic driver

@@ -129,18 +129,12 @@ void sportUpdateInit()
 
 void sportUpdatePowerOn()
 {
-  if (HAS_SPORT_UPDATE_CONNECTOR())
-    GPIO_SPORT_UPDATE_PWR_GPIO_ON(SPORT_UPDATE_PWR_GPIO, SPORT_UPDATE_PWR_GPIO_PIN);
-  else
-    EXTERNAL_MODULE_ON();
+  GPIO_SPORT_UPDATE_PWR_GPIO_ON(SPORT_UPDATE_PWR_GPIO, SPORT_UPDATE_PWR_GPIO_PIN);
 }
 
 void sportUpdatePowerOff()
 {
-  if (HAS_SPORT_UPDATE_CONNECTOR())
-    GPIO_SPORT_UPDATE_PWR_GPIO_OFF(SPORT_UPDATE_PWR_GPIO, SPORT_UPDATE_PWR_GPIO_PIN);
-  else
-    EXTERNAL_MODULE_OFF();
+  GPIO_SPORT_UPDATE_PWR_GPIO_OFF(SPORT_UPDATE_PWR_GPIO, SPORT_UPDATE_PWR_GPIO_PIN);
 }
 #endif
 
@@ -180,8 +174,17 @@ void boardInit()
 #endif
 
   keysInit();
-  adcInit();
   delaysInit();
+
+#if NUM_PWMSTICKS > 0
+  sticksPwmInit();
+  delay_ms(20);
+  if (pwm_interrupt_count < 32) {
+    sticks_pwm_disabled = true;
+  }
+#endif
+
+  adcInit();
   lcdInit(); // delaysInit() must be called before
   audioInit();
   init2MhzTimer();

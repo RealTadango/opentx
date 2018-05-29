@@ -20,6 +20,7 @@
 
 #include <stdio.h>
 #include "opentx.h"
+#include "storage/modelslist.h"
 
 #define REFRESH_FILES()        do { reusableBuffer.sdmanager.offset = 65535; currentBitmapIndex = -1; } while (0)
 #define NODE_TYPE(fname)       fname[SD_SCREEN_FILE_LENGTH+1]
@@ -126,6 +127,8 @@ void onSdManagerMenu(const char * result)
   }
   else if (result == STR_ASSIGN_BITMAP) {
     memcpy(g_model.header.bitmap, line, sizeof(g_model.header.bitmap));
+    if(modelslist.getCurrentModel())
+      modelslist.getCurrentModel()->resetBuffer();
     storageDirty(EE_MODEL);
   }
   else if (result == STR_ASSIGN_SPLASH) {
@@ -136,9 +139,17 @@ void onSdManagerMenu(const char * result)
     getSelectionFullPath(lfn);
     pushMenuTextView(lfn);
   }
-  else if (result == STR_FLASH_EXTERNAL_DEVICE) {
+  else if (result == STR_FLASH_INTERNAL_MODULE) {
+    getSelectionFullPath(lfn);
+    sportFlashDevice(INTERNAL_MODULE, lfn);
+  }
+  else if (result == STR_FLASH_EXTERNAL_MODULE) {
     getSelectionFullPath(lfn);
     sportFlashDevice(EXTERNAL_MODULE, lfn);
+  }
+  else if (result == STR_FLASH_EXTERNAL_DEVICE) {
+    getSelectionFullPath(lfn);
+    sportFlashDevice(FLASHING_MODULE, lfn);
   }
 #if defined(LUA)
   else if (result == STR_EXECUTE_FILE) {
@@ -231,7 +242,10 @@ bool menuRadioSdManager(event_t _event)
             POPUP_MENU_ADD_ITEM(STR_VIEW_TEXT);
           }
           else if (!READ_ONLY() && !strcasecmp(ext, SPORT_FIRMWARE_EXT)) {
-            POPUP_MENU_ADD_ITEM(STR_FLASH_EXTERNAL_DEVICE);
+            if (HAS_SPORT_UPDATE_CONNECTOR())
+              POPUP_MENU_ADD_ITEM(STR_FLASH_EXTERNAL_DEVICE);
+            POPUP_MENU_ADD_ITEM(STR_FLASH_INTERNAL_MODULE);
+            POPUP_MENU_ADD_ITEM(STR_FLASH_EXTERNAL_MODULE);
           }
           else if (isExtensionMatching(ext, SCRIPTS_EXT)) {
             POPUP_MENU_ADD_ITEM(STR_EXECUTE_FILE);
