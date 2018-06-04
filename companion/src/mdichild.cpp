@@ -120,6 +120,8 @@ void MdiChild::closeEvent(QCloseEvent *event)
     event->ignore();
     return;
   }
+  event->accept();
+
   if (!isMinimized()) {
     QByteArray geo;
     if (isMaximized())
@@ -131,15 +133,16 @@ void MdiChild::closeEvent(QCloseEvent *event)
     g.mdiWinGeo(geo);
   }
 
+  if (!isVisible())
+    return;
+
   QByteArray state;
   QDataStream stream(&state, QIODevice::WriteOnly);
   stream << stateDataVersion
-        << (firmware->getCapability(Capability::HasModelCategories) ? categoriesToolbar->isVisible() : showCatToolbar)
-        << modelsToolbar->isVisible()
-        << radioToolbar->isVisible();
+         << (firmware->getCapability(Capability::HasModelCategories) ? categoriesToolbar->isVisible() : showCatToolbar)
+         << modelsToolbar->isVisible()
+         << radioToolbar->isVisible();
   g.mdiWinState(state);
-
-  event->accept();
 }
 
 void MdiChild::resizeEvent(QResizeEvent * event)
@@ -1259,7 +1262,7 @@ void MdiChild::openModelEditWindow(int row)
   gStopwatch.report("ModelEdit creation");
   ModelEdit * t = new ModelEdit(this, radioData, (row), firmware);
   gStopwatch.report("ModelEdit created");
-  t->setWindowTitle(tr("Editing model %1: ").arg(row+1) + model.name);
+  t->setWindowTitle(tr("Editing model %1: ").arg(row+1) + QString(model.name));
   connect(t, &ModelEdit::modified, this, &MdiChild::setModified);
   gStopwatch.report("STARTING MODEL EDIT");
   t->show();

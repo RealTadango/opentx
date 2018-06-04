@@ -18,31 +18,12 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _HELI_H_
-#define _HELI_H_
+#include "moduledata.h"
+#include "radiodataconversionstate.h"
 
-#include "modeledit.h"
-
-namespace Ui {
-  class Heli;
-}
-
-class HeliPanel : public ModelPanel
+void ModuleData::convert(RadioDataConversionState & cstate)
 {
-    Q_OBJECT
-
-  public:
-    HeliPanel(QWidget *parent, ModelData & model, GeneralSettings & generalSettings, Firmware * firmware);
-    ~HeliPanel();
-    void update();
-
-  private slots:
-    void setDataModels();
-    void edited();
-
-  private:
-    Ui::Heli *ui;
-    QStandardItemModel * rawSourceItemModel;
-};
-
-#endif // _HELI_H_
+  if (protocol == PULSES_PXX_R9M && (IS_TARANIS_XLITE(cstate.fromType) || IS_TARANIS_XLITE(cstate.toType))) {
+    clear();
+  }
+}

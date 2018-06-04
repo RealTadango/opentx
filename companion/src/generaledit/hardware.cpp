@@ -157,8 +157,9 @@ HardwarePanel::HardwarePanel(QWidget * parent, GeneralSettings & generalSettings
     ui->txCurrentCalibrationLabel->hide();
   }
 
-  if (IS_TARANIS_X9E(board) || IS_HORUS(board)) {
-    ui->bluetoothEnable->setChecked(generalSettings.bluetoothEnable);
+  if (IS_TARANIS_X7(board) || IS_TARANIS_XLITE(board)|| IS_TARANIS_X9E(board) || IS_HORUS(board)) {
+    ui->bluetoothMode->setAutoIndexes();
+    ui->bluetoothMode->setField(generalSettings.bluetoothMode, this);
     ui->bluetoothName->setField(generalSettings.bluetoothName, 10, this);
   }
   else {
@@ -236,12 +237,6 @@ void HardwarePanel::on_txCurrentCalibration_editingFinished()
     generalSettings.txCurrentCalibration = ui->txCurrentCalibration->value();
     emit modified();
   }
-}
-
-void HardwarePanel::on_bluetoothEnable_stateChanged(int)
-{
-  generalSettings.bluetoothEnable = ui->bluetoothEnable->isChecked();
-  emit modified();
 }
 
 void HardwarePanel::setValues()
