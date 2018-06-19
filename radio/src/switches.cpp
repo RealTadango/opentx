@@ -721,6 +721,7 @@ void checkSwitches()
     }
 
     LED_ERROR_BEGIN();
+    backlightOn();
 
     // first - display warning
 #if defined(PCBTARANIS) || defined(PCBHORUS)
@@ -962,7 +963,6 @@ int16_t lswTimerValue(delayval_t val)
 void logicalSwitchesReset()
 {
 #if defined(CPUARM)
-  flightModeTransitionLast = 255;
   memset(lswFm, 0, sizeof(lswFm));
 #else
   s_last_switch_value = 0;

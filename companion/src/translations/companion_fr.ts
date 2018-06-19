@@ -728,6 +728,7 @@ Peut être différente de la langue du firmware</translation>
     </message>
     <message>
         <location filename="../firmwares/boards.cpp" line="301"/>
+        <location filename="../firmwares/boards.cpp" line="419"/>
         <source>Unknown</source>
         <translation>Inconnu</translation>
     </message>
@@ -1248,7 +1249,7 @@ Voulez-vous les importer ?</translation>
     </message>
     <message>
         <location filename="../modeledit/curves.ui" line="104"/>
-        <location filename="../modeledit/curves.ui" line="309"/>
+        <location filename="../modeledit/curves.ui" line="189"/>
         <source>Curve type</source>
         <translation>Type de courbe</translation>
     </message>
@@ -1258,47 +1259,52 @@ Voulez-vous les importer ?</translation>
         <translation>Créateur de courbe</translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.ui" line="185"/>
+        <location filename="../modeledit/curves.ui" line="307"/>
         <source>Y at X=0</source>
         <translation>Y pour X=0</translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.ui" line="208"/>
+        <location filename="../modeledit/curves.ui" line="314"/>
+        <source>Point size</source>
+        <translation>Taille point</translation>
+    </message>
+    <message>
+        <location filename="../modeledit/curves.ui" line="274"/>
         <source>Y at X=100</source>
         <translation>Y pour X=100</translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.ui" line="232"/>
+        <location filename="../modeledit/curves.ui" line="256"/>
         <source>Both</source>
         <translation>Les 2</translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.ui" line="237"/>
+        <location filename="../modeledit/curves.ui" line="261"/>
         <source>x&gt;0</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.ui" line="242"/>
+        <location filename="../modeledit/curves.ui" line="266"/>
         <source>x&lt;0</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.ui" line="266"/>
+        <location filename="../modeledit/curves.ui" line="297"/>
         <source>Apply</source>
         <translation>Appliquer</translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.ui" line="273"/>
+        <location filename="../modeledit/curves.ui" line="196"/>
         <source>Side</source>
         <translation>Côté</translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.ui" line="316"/>
+        <location filename="../modeledit/curves.ui" line="248"/>
         <source>Y at X=-100</source>
         <translation>Y pour X=-100</translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.ui" line="323"/>
+        <location filename="../modeledit/curves.ui" line="182"/>
         <source>Coefficient</source>
         <translation></translation>
     </message>
@@ -1308,72 +1314,72 @@ Voulez-vous les importer ?</translation>
         <translation>Nom de la courbe</translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.cpp" line="152"/>
+        <location filename="../modeledit/curves.cpp" line="154"/>
         <source>Curve %1</source>
         <translation>Courbe %1</translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.cpp" line="206"/>
+        <location filename="../modeledit/curves.cpp" line="208"/>
         <source>%1 points</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.cpp" line="210"/>
+        <location filename="../modeledit/curves.cpp" line="212"/>
         <source>Linear</source>
         <translation>Linéaire</translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.cpp" line="211"/>
+        <location filename="../modeledit/curves.cpp" line="213"/>
         <source>Single Expo</source>
         <translation>Expo simple</translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.cpp" line="212"/>
+        <location filename="../modeledit/curves.cpp" line="214"/>
         <source>Symmetrical f(x)=-f(-x)</source>
         <translation>Symétrique f(x)=-f(-x)</translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.cpp" line="213"/>
+        <location filename="../modeledit/curves.cpp" line="215"/>
         <source>Symmetrical f(x)=f(-x)</source>
         <translation>Symétrique f(x)=f(-x)</translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.cpp" line="593"/>
+        <location filename="../modeledit/curves.cpp" line="602"/>
         <source>Copy</source>
         <translation>Copier</translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.cpp" line="596"/>
+        <location filename="../modeledit/curves.cpp" line="605"/>
         <source>Paste</source>
         <translation>Coller</translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.cpp" line="602"/>
+        <location filename="../modeledit/curves.cpp" line="611"/>
         <source>Clear</source>
         <translation>Effacer</translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.cpp" line="604"/>
+        <location filename="../modeledit/curves.cpp" line="613"/>
         <source>Clear all curves</source>
         <translation>Effacer toutes les courbes</translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.cpp" line="625"/>
+        <location filename="../modeledit/curves.cpp" line="634"/>
         <source>Are you sure you want to reset curve %1?</source>
         <translation>Etes-vous sûr de vouloir effacer la courbe %1 ?</translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.cpp" line="633"/>
+        <location filename="../modeledit/curves.cpp" line="642"/>
         <source>Are you sure you want to reset all curves?</source>
         <translation>Etes-vous sûr de vouloir effacer toutes les courbes ?</translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.cpp" line="304"/>
+        <location filename="../modeledit/curves.cpp" line="310"/>
         <source>Editing curve %1</source>
         <translation>Édition de la courbe %1</translation>
     </message>
     <message>
-        <location filename="../modeledit/curves.cpp" line="448"/>
+        <location filename="../modeledit/curves.cpp" line="457"/>
         <source>Not enough free points in EEPROM to store the curve.</source>
         <translation>Pas assez de points disponibles en mémoire pour enregistrer la courbe.</translation>
     </message>
@@ -4887,225 +4893,192 @@ Cette fonction ne peut pas être désactivée sur la radio.
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="153"/>
-        <location filename="../generaledit/hardware.ui" line="172"/>
-        <location filename="../generaledit/hardware.ui" line="903"/>
-        <location filename="../generaledit/hardware.ui" line="922"/>
-        <location filename="../generaledit/hardware.ui" line="941"/>
-        <location filename="../generaledit/hardware.ui" line="960"/>
-        <location filename="../generaledit/hardware.ui" line="979"/>
-        <location filename="../generaledit/hardware.ui" line="998"/>
-        <location filename="../generaledit/hardware.ui" line="1017"/>
-        <location filename="../generaledit/hardware.ui" line="1036"/>
-        <source>Beeper volume
-
-0 - Quiet.  No beeps at all.
-1 - No Keys.  Normal beeps but menu keys do not beep.
-2 - Normal.
-3 - Loud.
-4 - Extra loud.</source>
-        <translation>Volume des bips
-
-Mode silencieux : tous bips désactivés.
-Touches silencieuses : bips normaux mais touches de navigation silencieuses.
-Normal : durée des bips par défaut.
-Long : bips plus longs.
-Extra long : bips extra longs.</translation>
-    </message>
-    <message>
-        <location filename="../generaledit/hardware.ui" line="186"/>
-        <location filename="../generaledit/hardware.ui" line="1108"/>
+        <location filename="../generaledit/hardware.ui" line="168"/>
         <source>OFF</source>
         <translation>Eteint</translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="191"/>
+        <location filename="../generaledit/hardware.ui" line="173"/>
         <source>S-Port Mirror</source>
         <translation>Recopie S. Port</translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="196"/>
-        <location filename="../generaledit/hardware.ui" line="1113"/>
+        <location filename="../generaledit/hardware.ui" line="178"/>
         <source>Telemetry</source>
         <translation>Télémetrie</translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="201"/>
+        <location filename="../generaledit/hardware.ui" line="183"/>
         <source>SBUS Trainer</source>
         <translation>Écolage SBUS</translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="206"/>
+        <location filename="../generaledit/hardware.ui" line="188"/>
         <source>Debug</source>
         <translation>Débogage</translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="235"/>
+        <location filename="../generaledit/hardware.ui" line="217"/>
         <source>Rud</source>
         <translation>Dir</translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="252"/>
+        <location filename="../generaledit/hardware.ui" line="234"/>
         <source>PPM 3</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="266"/>
+        <location filename="../generaledit/hardware.ui" line="248"/>
         <source>S1</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="280"/>
+        <location filename="../generaledit/hardware.ui" line="262"/>
         <source>S2</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="287"/>
+        <location filename="../generaledit/hardware.ui" line="269"/>
         <source>S3</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="294"/>
+        <location filename="../generaledit/hardware.ui" line="276"/>
         <source>PPM 1</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="320"/>
+        <location filename="../generaledit/hardware.ui" line="302"/>
         <source>Serial Port</source>
         <translation>Port série</translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="333"/>
+        <location filename="../generaledit/hardware.ui" line="315"/>
         <source>v</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="352"/>
+        <location filename="../generaledit/hardware.ui" line="334"/>
         <source>PPM Multiplier</source>
         <translation>Coeff. multiplicateur PPM</translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="391"/>
+        <location filename="../generaledit/hardware.ui" line="373"/>
         <source>Current Offset</source>
         <translation>Correction  courant</translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="398"/>
+        <location filename="../generaledit/hardware.ui" line="380"/>
         <source>PPM 4</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="412"/>
+        <location filename="../generaledit/hardware.ui" line="394"/>
         <source>SA</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="419"/>
+        <location filename="../generaledit/hardware.ui" line="401"/>
         <source>Ele</source>
         <translation>Prf</translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="440"/>
+        <location filename="../generaledit/hardware.ui" line="422"/>
         <source>Ail</source>
         <translation>Ail</translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="454"/>
+        <location filename="../generaledit/hardware.ui" line="436"/>
         <source>Thr</source>
         <translation>Gaz</translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="468"/>
+        <location filename="../generaledit/hardware.ui" line="450"/>
         <source>SC</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="482"/>
+        <location filename="../generaledit/hardware.ui" line="464"/>
         <source>LS</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="516"/>
+        <location filename="../generaledit/hardware.ui" line="498"/>
         <source>SD</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="555"/>
+        <location filename="../generaledit/hardware.ui" line="537"/>
         <source>Battery Offset</source>
         <translation>Correction tension </translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="588"/>
+        <location filename="../generaledit/hardware.ui" line="570"/>
         <source>SE</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="615"/>
+        <location filename="../generaledit/hardware.ui" line="597"/>
         <source>SF</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="642"/>
+        <location filename="../generaledit/hardware.ui" line="624"/>
         <source>SG</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="669"/>
+        <location filename="../generaledit/hardware.ui" line="651"/>
         <source>SH</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="683"/>
+        <location filename="../generaledit/hardware.ui" line="665"/>
         <source>SI</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="697"/>
+        <location filename="../generaledit/hardware.ui" line="679"/>
         <source>SJ</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="711"/>
+        <location filename="../generaledit/hardware.ui" line="693"/>
         <source>SK</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="725"/>
+        <location filename="../generaledit/hardware.ui" line="707"/>
         <source>SL</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="732"/>
+        <location filename="../generaledit/hardware.ui" line="714"/>
         <source>SM</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="746"/>
+        <location filename="../generaledit/hardware.ui" line="728"/>
         <source>SN</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="773"/>
+        <location filename="../generaledit/hardware.ui" line="755"/>
         <source>RS2</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="1055"/>
+        <location filename="../generaledit/hardware.ui" line="965"/>
         <source>Bluetooth</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="1079"/>
+        <location filename="../generaledit/hardware.ui" line="989"/>
         <source>ADC Filter</source>
         <translation>Filtre ADC</translation>
     </message>
     <message>
-        <location filename="../generaledit/hardware.ui" line="1118"/>
-        <source>Trainer</source>
-        <translation>Écolage</translation>
-    </message>
-    <message>
-        <location filename="../generaledit/hardware.ui" line="1142"/>
+        <location filename="../generaledit/hardware.ui" line="1037"/>
         <source>Device Name:</source>
         <translation>Nom de l&apos;appareil:</translation>
     </message>
@@ -5153,6 +5126,26 @@ Extra long : bips extra longs.</translation>
         <location filename="../generaledit/hardware.cpp" line="79"/>
         <source>Slider with detent</source>
         <translation>Curseur avec centre</translation>
+    </message>
+    <message>
+        <location filename="../generaledit/hardware.cpp" line="161"/>
+        <source>OFF</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../generaledit/hardware.cpp" line="163"/>
+        <source>Enabled</source>
+        <translation>Activé</translation>
+    </message>
+    <message>
+        <location filename="../generaledit/hardware.cpp" line="166"/>
+        <source>Telemetry</source>
+        <translation>Télémétrie</translation>
+    </message>
+    <message>
+        <location filename="../generaledit/hardware.cpp" line="167"/>
+        <source>Trainer</source>
+        <translation>Écolage</translation>
     </message>
 </context>
 <context>
@@ -7041,11 +7034,6 @@ Do you wish to continue?</source>
         <translation>Impossible de dupliquer le modèle, aucun emplacement libre n’est disponible.</translation>
     </message>
     <message>
-        <location filename="../mdichild.cpp" line="1455"/>
-        <source>&lt;p&gt;&lt;b&gt;Current radio type is not compatible with file %1, models and settings need to be converted.&lt;/b&gt;&lt;/p&gt;</source>
-        <translation>&lt;p&gt;&lt;b&gt;Le type de radio actuel n&apos;est pas compatible avec le fichier %1, les modèles et les paramètres doivent être convertis.&lt;/b&gt;&lt;/p&gt;</translation>
-    </message>
-    <message>
         <location filename="../mdichild.cpp" line="1457"/>
         <source>Do you wish to continue with the conversion?</source>
         <translation>Souhaitez-vous vraiment lancer la conversion ?</translation>
@@ -7130,6 +7118,11 @@ Do you wish to continue?</source>
         <extracomment>Translators do NOT use accent for this, this is the default category name on Horus.</extracomment>
         <translatorcomment>No accent, but no more than 15 characters!!</translatorcomment>
         <translation>Nlle categorie</translation>
+    </message>
+    <message>
+        <location filename="../mdichild.cpp" line="1455"/>
+        <source>&lt;p&gt;&lt;b&gt;Currently selected radio type (%1) is not compatible with file %3 (from %2), models and settings need to be converted.&lt;/b&gt;&lt;/p&gt;</source>
+        <translation>&lt;p&gt;&lt;b&gt;Le type de radio actuellement sélectionné (%1) n&apos;est pas compatible avec le fichier %3 (à partir de %2), les modèles et les paramètres doivent être convertis.&lt;/b&gt;&lt;/p&gt;</translation>
     </message>
     <message>
         <location filename="../mdichild.cpp" line="1547"/>
@@ -7421,25 +7414,25 @@ Mixage actif par défaut si non-renseigné.</translation>
     <name>MixesPanel</name>
     <message>
         <location filename="../modeledit/mixes.cpp" line="36"/>
-        <location filename="../modeledit/mixes.cpp" line="444"/>
+        <location filename="../modeledit/mixes.cpp" line="423"/>
         <source>Move Up</source>
         <translation>Monter</translation>
     </message>
     <message>
         <location filename="../modeledit/mixes.cpp" line="38"/>
-        <location filename="../modeledit/mixes.cpp" line="444"/>
+        <location filename="../modeledit/mixes.cpp" line="423"/>
         <source>Ctrl+Up</source>
         <translation>Ctrl+Haut</translation>
     </message>
     <message>
         <location filename="../modeledit/mixes.cpp" line="39"/>
-        <location filename="../modeledit/mixes.cpp" line="445"/>
+        <location filename="../modeledit/mixes.cpp" line="424"/>
         <source>Move Down</source>
         <translation>Descendre</translation>
     </message>
     <message>
         <location filename="../modeledit/mixes.cpp" line="41"/>
-        <location filename="../modeledit/mixes.cpp" line="445"/>
+        <location filename="../modeledit/mixes.cpp" line="424"/>
         <source>Ctrl+Down</source>
         <translation>Ctrl+Bas</translation>
     </message>
@@ -7449,102 +7442,102 @@ Mixage actif par défaut si non-renseigné.</translation>
         <translation>Effacer tous les mixages</translation>
     </message>
     <message>
-        <location filename="../modeledit/mixes.cpp" line="172"/>
+        <location filename="../modeledit/mixes.cpp" line="151"/>
         <source>Not enough available mixers!</source>
         <translation>Plus de mixages disponibles !</translation>
     </message>
     <message>
-        <location filename="../modeledit/mixes.cpp" line="286"/>
+        <location filename="../modeledit/mixes.cpp" line="265"/>
         <source>Delete Selected Mixes?</source>
         <translation>Supprimer les mixages sélectionnés ?</translation>
     </message>
     <message>
-        <location filename="../modeledit/mixes.cpp" line="434"/>
+        <location filename="../modeledit/mixes.cpp" line="413"/>
         <source>&amp;Add</source>
         <translation>&amp;Ajouter</translation>
     </message>
     <message>
-        <location filename="../modeledit/mixes.cpp" line="434"/>
+        <location filename="../modeledit/mixes.cpp" line="413"/>
         <source>Ctrl+A</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../modeledit/mixes.cpp" line="435"/>
+        <location filename="../modeledit/mixes.cpp" line="414"/>
         <source>&amp;Edit</source>
         <translation>&amp;Édition</translation>
     </message>
     <message>
-        <location filename="../modeledit/mixes.cpp" line="435"/>
+        <location filename="../modeledit/mixes.cpp" line="414"/>
         <source>Enter</source>
         <translation>Entrée</translation>
     </message>
     <message>
-        <location filename="../modeledit/mixes.cpp" line="436"/>
+        <location filename="../modeledit/mixes.cpp" line="415"/>
         <source>Ctrl+T</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../modeledit/mixes.cpp" line="436"/>
+        <location filename="../modeledit/mixes.cpp" line="415"/>
         <source>&amp;Toggle highlight</source>
         <translation>&amp;(Dé)sélectionner</translation>
     </message>
     <message>
-        <location filename="../modeledit/mixes.cpp" line="438"/>
+        <location filename="../modeledit/mixes.cpp" line="417"/>
         <source>&amp;Delete</source>
         <translation>&amp;Supprimer</translation>
     </message>
     <message>
-        <location filename="../modeledit/mixes.cpp" line="438"/>
+        <location filename="../modeledit/mixes.cpp" line="417"/>
         <source>Delete</source>
         <translation>Supprimer</translation>
     </message>
     <message>
-        <location filename="../modeledit/mixes.cpp" line="439"/>
+        <location filename="../modeledit/mixes.cpp" line="418"/>
         <source>&amp;Copy</source>
         <translation>&amp;Copier</translation>
     </message>
     <message>
-        <location filename="../modeledit/mixes.cpp" line="439"/>
+        <location filename="../modeledit/mixes.cpp" line="418"/>
         <source>Ctrl+C</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../modeledit/mixes.cpp" line="440"/>
+        <location filename="../modeledit/mixes.cpp" line="419"/>
         <source>Ctrl+X</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../modeledit/mixes.cpp" line="440"/>
+        <location filename="../modeledit/mixes.cpp" line="419"/>
         <source>C&amp;ut</source>
         <translation>&amp;Couper</translation>
     </message>
     <message>
-        <location filename="../modeledit/mixes.cpp" line="441"/>
+        <location filename="../modeledit/mixes.cpp" line="420"/>
         <source>&amp;Paste</source>
         <translation>&amp;Coller</translation>
     </message>
     <message>
-        <location filename="../modeledit/mixes.cpp" line="441"/>
+        <location filename="../modeledit/mixes.cpp" line="420"/>
         <source>Ctrl+V</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../modeledit/mixes.cpp" line="442"/>
+        <location filename="../modeledit/mixes.cpp" line="421"/>
         <source>Du&amp;plicate</source>
         <translation>&amp;Dupliquer</translation>
     </message>
     <message>
-        <location filename="../modeledit/mixes.cpp" line="442"/>
+        <location filename="../modeledit/mixes.cpp" line="421"/>
         <source>Ctrl+U</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../modeledit/mixes.cpp" line="548"/>
+        <location filename="../modeledit/mixes.cpp" line="527"/>
         <source>Clear Mixes?</source>
         <translation>Effacer tous les mixages ?</translation>
     </message>
     <message>
-        <location filename="../modeledit/mixes.cpp" line="548"/>
+        <location filename="../modeledit/mixes.cpp" line="527"/>
         <source>Really clear all the mixes?</source>
         <translation>Êtes-vous sûr de vraiment vouloir effacer tous les mixages ?</translation>
     </message>
