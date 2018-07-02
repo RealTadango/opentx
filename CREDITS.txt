@@ -1411,3 +1411,8 @@ Hannes Mössler
 Cédric Lagoutte
 Alexander Mathis
 Barry Andersen
+Philippe Glur
+Felix Tang
+Heiko Polig
+Pierre Marty
+Dirk Weiler

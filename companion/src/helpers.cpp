@@ -98,11 +98,16 @@ static QString iconThemeFolder(int theme_set)
 
 CompanionIcon::CompanionIcon(const QString &baseimage)
 {
+  addImage(baseimage);
+}
+
+void CompanionIcon::addImage(const QString & baseimage, Mode mode, State state)
+{
   const QString theme = iconThemeFolder(g.theme());
-  addFile(":/themes/"+theme+"/16/"+baseimage, QSize(16,16));
-  addFile(":/themes/"+theme+"/24/"+baseimage, QSize(24,24));
-  addFile(":/themes/"+theme+"/32/"+baseimage, QSize(32,32));
-  addFile(":/themes/"+theme+"/48/"+baseimage, QSize(48,48));
+  addFile(":/themes/"+theme+"/16/"+baseimage, QSize(16,16), mode, state);
+  addFile(":/themes/"+theme+"/24/"+baseimage, QSize(24,24), mode, state);
+  addFile(":/themes/"+theme+"/32/"+baseimage, QSize(32,32), mode, state);
+  addFile(":/themes/"+theme+"/48/"+baseimage, QSize(48,48), mode, state);
 }
 
 
@@ -643,7 +648,7 @@ const QString index2version(int index)
     if (nightly > 0 && nightly < 900) {
       result += "N" + QString::number(nightly);
     }
-    else if (nightly >= 900 && nightly < 1000) {
+    else if (nightly >= 900 && nightly < 999) {
       result += "RC" + QString::number(nightly-900);
     }
   }
