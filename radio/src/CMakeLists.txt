@@ -3,7 +3,7 @@ include(Bitmaps)
 
 set(PCB_TYPES X7 XLITE X9D X9D+ X9E X10 X12S 9X 9XR 9X128 9XR128 9X2561 GRUVIN9X MEGA2560 SKY9X 9XRPRO AR9X)
 set(GUI_LANGUAGES CZ DE EN ES FR IT PT SK SE PL HU NL)
-set(TTS_LANGUAGES CZ DE EN ES FR IT PT SK SE PL HU RU)
+set(TTS_LANGUAGES CZ DE EN ES FR IT PT SK SE PL HU NL RU)
 
 set(PCB "X9D+" CACHE STRING "Radio type, one of: ${PCB_TYPES}")
 set_property(CACHE PCB PROPERTY STRINGS ${PCB_TYPES})
@@ -46,6 +46,7 @@ option(TRACE_LUA_INTERNALS "Turn on traces for Lua internals" OFF)
 option(FRSKY_STICKS "Reverse sticks for FrSky sticks" OFF)
 option(NANO "Use nano newlib and binalloc")
 option(NIGHTLY_BUILD_WARNING "Warn this is a nightly build" OFF)
+option(MODULE_R9M_FLEX_FW "Add R9M options for non certified firmwwares" OFF)
 
 # since we reset all default CMAKE compiler flags for firmware builds, provide an alternate way for user to specify additional flags.
 set(FIRMWARE_C_FLAGS "" CACHE STRING "Additional flags for firmware target c compiler (note: all CMAKE_C_FLAGS[_*] are ignored for firmware/bootloader).")
@@ -351,6 +352,10 @@ endif()
 if(NIGHTLY_BUILD_WARNING)
   add_definitions(-DNIGHTLY_BUILD_WARNING)
 endif(NIGHTLY_BUILD_WARNING)
+
+if(MODULE_R9M_FLEX_FW)
+    add_definitions(-DMODULE_R9M_FLEX_FW)
+endif()
 
 set(SRC
   ${SRC}
