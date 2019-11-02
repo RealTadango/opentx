@@ -1395,6 +1395,7 @@
 #define ZSTR_TADANGO_GPS_DIST	       "Dist"
 #define ZSTR_TADANGO_GPS_TRAV	       "Trav"
 #define ZSTR_TADANGO_USED              "Used"
+#define ZSTR_TADANGO_LEFT	       "Left"
 #define ZSTR_TADANGO_FLOW              "Flow"
 #define ZSTR_ESC_VOLTAGE               "EscV"
 #define ZSTR_ESC_CURRENT               "EscA"
