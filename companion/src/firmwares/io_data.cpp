@@ -80,9 +80,14 @@ QString LimitData::offsetToString() const
 
 void LimitData::clear()
 {
-  memset(this, 0, sizeof(LimitData));
+  memset(reinterpret_cast<void *>(this), 0, sizeof(LimitData));
   min = -1000;
   max = +1000;
+}
+
+bool LimitData::isEmpty() const
+{
+  return (min == -1000 && max == 1000 && !revert && !offset && !ppmCenter && !symetrical && name[0] == '\0');
 }
 
 
@@ -123,7 +128,7 @@ QString CurveData::nameToString(const int idx) const
 
 void FlightModeData::clear(const int phase)
 {
-  memset(this, 0, sizeof(FlightModeData));
+  memset(reinterpret_cast<void *>(this), 0, sizeof(FlightModeData));
   if (phase != 0) {
     for (int idx=0; idx<CPN_MAX_GVARS; idx++) {
       gvars[idx] = 1025;

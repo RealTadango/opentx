@@ -22,14 +22,15 @@
 #define OPENTX_MULTI_H
 
 #include <vector>
-#include <QString>
-#include <QVector>
-#include <QStringList>
+#include <QtCore>
+#include "moduledata.h"
 
 #define MM_RF_CUSTOM_SELECTED 0xff
 
 class Multiprotocols
 {
+    Q_DECLARE_TR_FUNCTIONS(Multiprotocols)
+
   public:
 
     struct radio_mm_definition {
@@ -46,9 +47,9 @@ class Multiprotocols
       const QStringList subTypeStrings;
       const QString optionsstr;
 
-      unsigned int numSubytes() const
+      unsigned int numSubTypes() const
       {
-        return (unsigned int) subTypeStrings.length();
+        return protocol > MODULE_SUBTYPE_MULTI_LAST ? 8 : (unsigned int) subTypeStrings.length();
       }
 
       int getOptionMin() const;
@@ -72,6 +73,8 @@ class Multiprotocols
     }
 
     const MultiProtocolDefinition &getProtocol(int protocol) const;
+    static QString protocolToString(int protocol, bool custom = false);
+    static QString subTypeToString(int protocol, unsigned subType);
 
   private:
 

@@ -26,8 +26,11 @@
 
 #include <QMediaPlayer>
 
+class RawSourceFilterItemModel;
 class RawSwitchFilterItemModel;
 class TimerEdit;
+
+constexpr char MIMETYPE_FSW[] = "application/x-companion-fsw";
 
 class RepeatComboBox: public QComboBox
 {
@@ -52,7 +55,7 @@ class CustomFunctionsPanel : public GenericPanel
   Q_OBJECT
 
   public:
-    CustomFunctionsPanel(QWidget *parent, ModelData * mode, GeneralSettings & generalSettings, Firmware * firmware);
+    CustomFunctionsPanel(QWidget *parent, ModelData * model, GeneralSettings & generalSettings, Firmware * firmware);
     ~CustomFunctionsPanel();
 
     virtual void update();
@@ -61,7 +64,7 @@ class CustomFunctionsPanel : public GenericPanel
     CustomFunctionData * functions;
 
   private slots:
-    void setDataModels();
+    void updateDataModels();
     void customFunctionEdited();
     void functionEdited();
     void fsw_customContextMenuRequested(QPoint pos);
@@ -76,14 +79,22 @@ class CustomFunctionsPanel : public GenericPanel
     void fswCopy();
     void fswPaste();
     void fswCut();
+    void fswMoveUp();
+    void fswMoveDown();
+    void fswInsert();
+    void fswClear();
+    void fswClearAll();
 
   private:
     void populateFuncCB(QComboBox *b, unsigned int value);
     void populateGVmodeCB(QComboBox *b, unsigned int value);
     void populateFuncParamCB(QComboBox *b, uint function, unsigned int value, unsigned int adjustmode=0);
+    void swapFuncData(int idx1, int idx2);
+    void resetCBsAndRefresh(int idx);
     RawSwitchFilterItemModel * rawSwitchItemModel;
-    QStandardItemModel * rawSrcInputsItemModel;
-    QStandardItemModel * rawSrcAllItemModel;
+    RawSourceFilterItemModel * rawSrcAllItemModel;
+    RawSourceFilterItemModel * rawSrcInputsItemModel;
+    RawSourceFilterItemModel * rawSrcGVarsItemModel;
 
     QSet<QString> tracksSet;
     QSet<QString> scriptsSet;
@@ -103,6 +114,7 @@ class CustomFunctionsPanel : public GenericPanel
     QMediaPlayer * mediaPlayer;
 
     int selectedFunction;
+    int fswCapability;
 
 };
 

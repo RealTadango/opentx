@@ -87,12 +87,11 @@ enum SpanishPrompts {
 
 };
 
-#if defined(VOICE)
-  #define ES_PUSH_UNIT_PROMPT(u) es_pushUnitPrompt((u), id)
+#define ES_PUSH_UNIT_PROMPT(u) es_pushUnitPrompt((u), id)
 
 I18N_PLAY_FUNCTION(es, pushUnitPrompt, uint8_t unitprompt)
 {
-    PUSH_UNIT_PROMPT(unitprompt, 0);
+  PUSH_UNIT_PROMPT(unitprompt, 0);
 }
 
 I18N_PLAY_FUNCTION(es, playNumber, getvalue_t number, uint8_t unit, uint8_t att)
@@ -169,11 +168,9 @@ I18N_PLAY_FUNCTION(es, playDuration, int seconds PLAY_DURATION_ATT)
     seconds = -seconds;
   }
 
-  uint8_t ore = 0;
   uint8_t tmp = seconds / 3600;
   seconds %= 3600;
   if (tmp > 0 || IS_PLAY_TIME()) {
-    ore = tmp;
     if (tmp > 1) {
       PLAY_NUMBER(tmp, 0, 0);
       PUSH_UNIT_PROMPT(UNIT_HOURS, 1);
@@ -186,28 +183,28 @@ I18N_PLAY_FUNCTION(es, playDuration, int seconds PLAY_DURATION_ATT)
 
   tmp = seconds / 60;
   seconds %= 60;
-  if (tmp > 0 || ore >0) {
+  if (tmp > 0 ) {
     if (tmp != 1) {
       PLAY_NUMBER(tmp, 0, 0);
       PUSH_UNIT_PROMPT(UNIT_MINUTES, 1);
     }
     else {
-      PUSH_NUMBER_PROMPT(ES_PROMPT_UNA);
+      PUSH_NUMBER_PROMPT(ES_PROMPT_UN);
       PUSH_UNIT_PROMPT(UNIT_MINUTES, 0);
     }
-    PUSH_NUMBER_PROMPT(ES_PROMPT_Y);
   }
 
-  if (seconds != 1) {
-    PLAY_NUMBER(seconds, 0, 0);
-    PUSH_UNIT_PROMPT(UNIT_SECONDS, 1);
-  }
-  else {
-    PUSH_NUMBER_PROMPT(ES_PROMPT_UNA);
-    PUSH_UNIT_PROMPT(UNIT_SECONDS, 0);
+  if (seconds > 0) {
+    if (seconds != 1) {
+      PLAY_NUMBER(seconds, 0, 0);
+      PUSH_UNIT_PROMPT(UNIT_SECONDS, 1);
+    }
+    else {
+      PUSH_NUMBER_PROMPT(ES_PROMPT_UN);
+      PUSH_UNIT_PROMPT(UNIT_SECONDS, 0);
+    }
   }
 }
 
 LANGUAGE_PACK_DECLARE(es, "Espanol");
 
-#endif

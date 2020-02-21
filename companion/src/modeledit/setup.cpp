@@ -22,13 +22,16 @@
 #include "ui_setup.h"
 #include "ui_setup_timer.h"
 #include "ui_setup_module.h"
-#include "switchitemmodel.h"
+#include "rawitemfilteredmodel.h"
 #include "appdata.h"
 #include "modelprinter.h"
 #include "multiprotocols.h"
 #include "checklistdialog.h"
+#include "helpers.h"
 
-TimerPanel::TimerPanel(QWidget *parent, ModelData & model, TimerData & timer, GeneralSettings & generalSettings, Firmware * firmware, QWidget * prevFocus):
+#include <QDir>
+
+TimerPanel::TimerPanel(QWidget *parent, ModelData & model, TimerData & timer, GeneralSettings & generalSettings, Firmware * firmware, QWidget * prevFocus, RawSwitchFilterItemModel * switchModel):
   ModelPanel(parent, model, generalSettings, firmware),
   timer(timer),
   ui(new Ui::Timer)
@@ -50,9 +53,9 @@ TimerPanel::TimerPanel(QWidget *parent, ModelData & model, TimerData & timer, Ge
   }
 
   // Mode
-  rawSwitchItemModel = new RawSwitchFilterItemModel(&generalSettings, &model, TimersContext);
-  ui->mode->setModel(rawSwitchItemModel);
+  ui->mode->setModel(switchModel);
   ui->mode->setCurrentIndex(ui->mode->findData(timer.mode.toValue()));
+  connect(ui->mode, SIGNAL(activated(int)), this, SLOT(onModeChanged(int)));
 
   if (!firmware->getCapability(PermTimers)) {
     ui->persistent->hide();
@@ -92,12 +95,11 @@ TimerPanel::~TimerPanel()
 
 void TimerPanel::update()
 {
-  rawSwitchItemModel->update();
-
   int hour = timer.val / 3600;
   int min = (timer.val - (hour * 3600)) / 60;
   int sec = (timer.val - (hour * 3600)) % 60;
 
+  ui->mode->setCurrentIndex(ui->mode->findData(timer.mode.toValue()));
   ui->value->setTime(QTime(hour, min, sec));
 
   if (firmware->getCapability(PermTimers)) {
@@ -131,10 +133,15 @@ void TimerPanel::on_value_editingFinished()
   }
 }
 
-void TimerPanel::on_mode_currentIndexChanged(int index)
+void TimerPanel::onModeChanged(int index)
 {
-  if (!lock) {
-    timer.mode = RawSwitch(ui->mode->itemData(index).toInt());
+  if (lock)
+    return;
+
+  bool ok;
+  const RawSwitch rs(ui->mode->itemData(index).toInt(&ok));
+  if (ok && timer.mode.toValue() != rs.toValue()) {
+    timer.mode = rs;
     emit modified();
   }
 }
@@ -159,19 +166,20 @@ void TimerPanel::on_name_editingFinished()
 #define FAILSAFE_CHANNEL_HOLD    2000
 #define FAILSAFE_CHANNEL_NOPULSE 2001
 
-#define MASK_PROTOCOL       1
-#define MASK_CHANNELS_COUNT 2
-#define MASK_RX_NUMBER      4
-#define MASK_CHANNELS_RANGE 8
-#define MASK_PPM_FIELDS     16
-#define MASK_FAILSAFES      32
-#define MASK_OPEN_DRAIN     64
-#define MASK_MULTIMODULE    128
-#define MASK_ANTENNA        256
-#define MASK_MULTIOPTION    512
-#define MASK_R9M            1024
-#define MASK_SBUSPPM_FIELDS 2048
-#define MASK_SUBTYPES       4096
+#define MASK_PROTOCOL       (1<<0)
+#define MASK_CHANNELS_COUNT (1<<1)
+#define MASK_RX_NUMBER      (1<<2)
+#define MASK_CHANNELS_RANGE (1<<3)
+#define MASK_PPM_FIELDS     (1<<4)
+#define MASK_FAILSAFES      (1<<5)
+#define MASK_OPEN_DRAIN     (1<<6)
+#define MASK_MULTIMODULE    (1<<7)
+#define MASK_ANTENNA        (1<<8)
+#define MASK_MULTIOPTION    (1<<9)
+#define MASK_R9M            (1<<10)
+#define MASK_SBUSPPM_FIELDS (1<<11)
+#define MASK_SUBTYPES       (1<<12)
+#define MASK_ACCESS         (1<<13)
 
 quint8 ModulePanel::failsafesValueDisplayType = ModulePanel::FAILSAFE_DISPLAY_PERCENT;
 
@@ -185,16 +193,26 @@ ModulePanel::ModulePanel(QWidget * parent, ModelData & model, ModuleData & modul
 
   ui->setupUi(this);
 
-  QString label;
+  ui->label_module->setText(ModuleData::indexToString(moduleIdx, firmware));
   if (moduleIdx < 0) {
-    label = tr("Trainer Port");
-    if (IS_HORUS(firmware->getBoard())) {
+    if (!IS_TARANIS(firmware->getBoard())) {
       ui->trainerMode->setItemData(TRAINER_MODE_MASTER_CPPM_EXTERNAL_MODULE, 0, Qt::UserRole - 1);
       ui->trainerMode->setItemData(TRAINER_MODE_MASTER_SBUS_EXTERNAL_MODULE, 0, Qt::UserRole - 1);
-    }
-    if (generalSettings.hw_uartMode != UART_MODE_SBUS_TRAINER) {
       ui->trainerMode->setItemData(TRAINER_MODE_MASTER_BATTERY_COMPARTMENT, 0, Qt::UserRole - 1);
     }
+    else if (generalSettings.auxSerialMode != UART_MODE_SBUS_TRAINER) {
+      ui->trainerMode->setItemData(TRAINER_MODE_MASTER_BATTERY_COMPARTMENT, 0, Qt::UserRole - 1);
+    }
+
+    if (generalSettings.bluetoothMode != 2) {
+      ui->trainerMode->setItemData(TRAINER_MODE_MASTER_BLUETOOTH, 0, Qt::UserRole - 1);
+      ui->trainerMode->setItemData(TRAINER_MODE_SLAVE_BLUETOOTH, 0, Qt::UserRole - 1);
+    }
+
+    if (!IS_FAMILY_T16(firmware->getBoard())) {
+      ui->trainerMode->setItemData(TRAINER_MODE_MULTI, 0, Qt::UserRole - 1);
+    }
+
     ui->trainerMode->setCurrentIndex(model.trainerMode);
     if (!IS_HORUS_OR_TARANIS(firmware->getBoard())) {
       ui->label_trainerMode->hide();
@@ -205,44 +223,30 @@ ModulePanel::ModulePanel(QWidget * parent, ModelData & model, ModuleData & modul
   else {
     ui->label_trainerMode->hide();
     ui->trainerMode->hide();
-    if (firmware->getCapability(NumModules) > 1) {
-      if (IS_HORUS_OR_TARANIS(firmware->getBoard())) {
-        if (moduleIdx == 0)
-          label = tr("Internal Radio System");
-        else
-          label = tr("External Radio Module");
-      }
-      else {
-        if (moduleIdx == 0)
-          label = tr("Radio System");
-        else
-          label = tr("Extra Radio System");
-      }
-    }
-    else {
-      label = tr("Radio System");
-    }
   }
-  ui->label_module->setText(label);
 
   // The protocols available on this board
-  for (int i=0; i<PULSES_PROTOCOL_LAST; i++) {
+  for (unsigned int i=0; i<PULSES_PROTOCOL_LAST; i++) {
     if (firmware->isAvailable((PulsesProtocol) i, moduleIdx)) {
-      if (IS_TARANIS_XLITE(firmware->getBoard()) && i == PULSES_PXX_R9M)  //TODO remove when mini are handled as a different module type
-        ui->protocol->addItem("FrSky R9M Mini", (QVariant) i);
-      else
-        ui->protocol->addItem(ModelPrinter::printModuleProtocol(i), (QVariant) i);
+      ui->protocol->addItem(ModuleData::protocolToString(i), i);
       if (i == module.protocol)
         ui->protocol->setCurrentIndex(ui->protocol->count()-1);
     }
   }
-  for (int i=0; i<=MM_RF_PROTO_LAST; i++) {
-    ui->multiProtocol->addItem(ModelPrinter::printMultiRfProtocol(i, false), (QVariant) i);
+  for (int i=0; i<=MODULE_SUBTYPE_MULTI_LAST; i++) {
+    if (i == MODULE_SUBTYPE_MULTI_SCANNER)
+      continue;
+    ui->multiProtocol->addItem(Multiprotocols::protocolToString(i), i);
+  }
+  for (int i=MODULE_SUBTYPE_MULTI_LAST + 1; i <= 124; i++) {
+    ui->multiProtocol->addItem(QString::number(i + 3), i);
   }
 
   ui->btnGrpValueType->setId(ui->optPercent, FAILSAFE_DISPLAY_PERCENT);
   ui->btnGrpValueType->setId(ui->optUs, FAILSAFE_DISPLAY_USEC);
   ui->btnGrpValueType->button(failsafesValueDisplayType)->setChecked(true);
+
+  ui->registrationId->setText(model.registrationId);
 
   setupFailsafes();
 
@@ -251,9 +255,14 @@ ModulePanel::ModulePanel(QWidget * parent, ModelData & model, ModuleData & modul
   update();
 
   connect(ui->protocol, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &ModulePanel::onProtocolChanged);
+  connect(ui->multiSubType, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &ModulePanel::onSubTypeChanged);
   connect(ui->multiProtocol, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &ModulePanel::onMultiProtocolChanged);
   connect(this, &ModulePanel::channelsRangeChanged, this, &ModulePanel::setupFailsafes);
   connect(ui->btnGrpValueType, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked), this, &ModulePanel::onFailsafesDisplayValueTypeChanged);
+
+  connect(ui->clearRx1, SIGNAL(clicked()), this, SLOT(onClearAccessRxClicked()));
+  connect(ui->clearRx2, SIGNAL(clicked()), this, SLOT(onClearAccessRxClicked()));
+  connect(ui->clearRx3, SIGNAL(clicked()), this, SLOT(onClearAccessRxClicked()));
 
   lock = false;
 
@@ -266,8 +275,17 @@ ModulePanel::~ModulePanel()
 
 bool ModulePanel::moduleHasFailsafes()
 {
-  return (((PulsesProtocol)module.protocol == PulsesProtocol::PULSES_PXX_XJT_X16 || (PulsesProtocol)module.protocol == PulsesProtocol::PULSES_PXX_R9M)
-         && firmware->getCapability(HasFailsafe));;
+  return firmware->getCapability(HasFailsafe) && (
+    (PulsesProtocol)module.protocol == PulsesProtocol::PULSES_ACCESS_ISRM ||
+    (PulsesProtocol)module.protocol == PulsesProtocol::PULSES_ACCST_ISRM_D16 ||
+    (PulsesProtocol)module.protocol == PulsesProtocol::PULSES_PXX_XJT_X16 ||
+    (PulsesProtocol)module.protocol == PulsesProtocol::PULSES_PXX_R9M ||
+    (PulsesProtocol)module.protocol == PulsesProtocol::PULSES_ACCESS_R9M ||
+    (PulsesProtocol)module.protocol == PulsesProtocol::PULSES_ACCESS_R9M_LITE ||
+    (PulsesProtocol)module.protocol == PulsesProtocol::PULSES_ACCESS_R9M_LITE_PRO ||
+    (PulsesProtocol)module.protocol == PulsesProtocol::PULSES_XJT_LITE_X16 ||
+    (PulsesProtocol)module.protocol == PulsesProtocol::PULSES_MULTIMODULE
+    );
 }
 
 void ModulePanel::setupFailsafes()
@@ -296,8 +314,10 @@ void ModulePanel::setupFailsafes()
     }
   }
 
-  if (!hasFailsafe)
+  if (!hasFailsafe) {
+    lock = false;
     return;
+  }
 
   int row = 0;
   int col = 0;
@@ -362,10 +382,54 @@ void ModulePanel::setupFailsafes()
   lock = false;
 }
 
+int ModulePanel::getMaxChannelCount()
+{
+  const PulsesProtocol protocol = (PulsesProtocol)module.protocol;
+  switch (protocol) {
+    case PULSES_ACCESS_ISRM:
+      return 24;
+    case PULSES_PXX_R9M:
+    case PULSES_ACCESS_R9M:
+    case PULSES_ACCESS_R9M_LITE:
+    case PULSES_ACCESS_R9M_LITE_PRO:
+    case PULSES_ACCST_ISRM_D16:
+    case PULSES_XJT_LITE_X16:
+    case PULSES_PXX_XJT_X16:
+    case PULSES_CROSSFIRE:
+    case PULSES_SBUS:
+    case PULSES_PPM:
+      return 16;
+    case PULSES_XJT_LITE_LR12:
+    case PULSES_PXX_XJT_LR12:
+      return 12;
+    case PULSES_PXX_DJT:
+    case PULSES_XJT_LITE_D8:
+    case PULSES_PXX_XJT_D8:
+      return 8;
+    case PULSES_LP45:
+    case PULSES_DSM2:
+    case PULSES_DSMX:
+      return 6;
+    case PULSES_MULTIMODULE:
+      if (module.multi.rfProtocol == MODULE_SUBTYPE_MULTI_DSM2)
+        return 12;
+      else
+        return 16;
+      break;
+    case PULSES_OFF:
+      break;
+    default:
+      break;
+  }
+  return 8;
+}
+
 void ModulePanel::update()
 {
+  const PulsesProtocol protocol = (PulsesProtocol)module.protocol;
+  const Board::Type board = firmware->getBoard();
+  const Multiprotocols::MultiProtocolDefinition & pdef = multiProtocols.getProtocol(module.multi.rfProtocol);
   unsigned int mask = 0;
-  PulsesProtocol protocol = (PulsesProtocol)module.protocol;
   unsigned int max_rx_num = 63;
 
   if (moduleIdx >= 0) {
@@ -373,14 +437,29 @@ void ModulePanel::update()
     switch (protocol) {
       case PULSES_PXX_R9M:
         mask |= MASK_R9M | MASK_SUBTYPES;
+      case PULSES_ACCESS_R9M:
+      case PULSES_ACCESS_R9M_LITE:
+      case PULSES_ACCESS_R9M_LITE_PRO:
+      case PULSES_ACCESS_ISRM:
+      case PULSES_ACCST_ISRM_D16:
+      case PULSES_XJT_LITE_X16:
+      case PULSES_XJT_LITE_D8:
+      case PULSES_XJT_LITE_LR12:
       case PULSES_PXX_XJT_X16:
       case PULSES_PXX_XJT_D8:
       case PULSES_PXX_XJT_LR12:
       case PULSES_PXX_DJT:
         mask |= MASK_CHANNELS_RANGE | MASK_CHANNELS_COUNT;
-        if (protocol==PULSES_PXX_XJT_X16 || protocol==PULSES_PXX_XJT_LR12 || protocol==PULSES_PXX_R9M)
+        // ACCST Rx ID
+        if (protocol==PULSES_PXX_XJT_X16 || protocol==PULSES_PXX_XJT_LR12 ||
+            protocol==PULSES_PXX_R9M || protocol==PULSES_ACCST_ISRM_D16 ||
+            protocol==PULSES_XJT_LITE_X16 || protocol==PULSES_XJT_LITE_LR12)
           mask |= MASK_RX_NUMBER;
-        if ((IS_HORUS(firmware->getBoard()) || IS_TARANIS_XLITE(firmware->getBoard())) && moduleIdx==0)
+        // ACCESS
+        else if (protocol==PULSES_ACCESS_ISRM || protocol==PULSES_ACCESS_R9M ||
+                 protocol==PULSES_ACCESS_R9M_LITE || protocol==PULSES_ACCESS_R9M_LITE_PRO)
+          mask |= MASK_RX_NUMBER | MASK_ACCESS;
+        if (moduleIdx == 0 && HAS_EXTERNAL_ANTENNA(board) && generalSettings.antennaMode == 0 /* per model */)
           mask |= MASK_ANTENNA;
         break;
       case PULSES_LP45:
@@ -396,7 +475,7 @@ void ModulePanel::update()
         break;
       case PULSES_PPM:
         mask |= MASK_PPM_FIELDS | MASK_SBUSPPM_FIELDS| MASK_CHANNELS_RANGE| MASK_CHANNELS_COUNT;
-        if (IS_9XRPRO(firmware->getBoard())) {
+        if (IS_9XRPRO(board)) {
           mask |= MASK_OPEN_DRAIN;
         }
         break;
@@ -406,14 +485,14 @@ void ModulePanel::update()
         break;
       case PULSES_MULTIMODULE:
         mask |= MASK_CHANNELS_RANGE | MASK_RX_NUMBER | MASK_MULTIMODULE | MASK_SUBTYPES;
-        max_rx_num = 15;
-        if (module.multi.rfProtocol == MM_RF_PROTO_DSM2)
+        max_rx_num = 63;
+        if (module.multi.rfProtocol == MODULE_SUBTYPE_MULTI_DSM2)
           mask |= MASK_CHANNELS_COUNT;
         else
           module.channelsCount = 16;
-        if (multiProtocols.getProtocol(module.multi.rfProtocol).optionsstr != nullptr)
+        if (pdef.optionsstr != nullptr)
           mask |= MASK_MULTIOPTION;
-        if (multiProtocols.getProtocol(module.multi.rfProtocol).hasFailsafe)
+        if (pdef.hasFailsafe || (module.multi.rfProtocol == MODULE_SUBTYPE_MULTI_FRSKY && (module.subType == 0 || module.subType == 2 || module.subType > 3 )))
           mask |= MASK_FAILSAFES;
         break;
       case PULSES_OFF:
@@ -422,7 +501,7 @@ void ModulePanel::update()
         break;
     }
   }
-  else if (IS_HORUS_OR_TARANIS(firmware->getBoard())) {
+  else if (IS_HORUS_OR_TARANIS(board)) {
     if (model->trainerMode == TRAINER_SLAVE_JACK) {
       mask |= MASK_PPM_FIELDS | MASK_CHANNELS_RANGE | MASK_CHANNELS_COUNT;
     }
@@ -443,10 +522,12 @@ void ModulePanel::update()
   ui->rxNumber->setValue(module.modelId);
   ui->label_channelsStart->setVisible(mask & MASK_CHANNELS_RANGE);
   ui->channelsStart->setVisible(mask & MASK_CHANNELS_RANGE);
+  ui->channelsStart->setMaximum(33 - module.channelsCount);
   ui->channelsStart->setValue(module.channelsStart+1);
   ui->label_channelsCount->setVisible(mask & MASK_CHANNELS_RANGE);
   ui->channelsCount->setVisible(mask & MASK_CHANNELS_RANGE);
   ui->channelsCount->setEnabled(mask & MASK_CHANNELS_COUNT);
+  ui->channelsCount->setMaximum(getMaxChannelCount());
   ui->channelsCount->setValue(module.channelsCount);
   ui->channelsCount->setSingleStep(firmware->getCapability(HasPPMStart) ? 1 : 2);
 
@@ -462,54 +543,33 @@ void ModulePanel::update()
   ui->ppmDelay->setValue(module.ppm.delay);
   ui->label_ppmFrameLength->setVisible(mask & MASK_SBUSPPM_FIELDS);
   ui->ppmFrameLength->setVisible(mask & MASK_SBUSPPM_FIELDS);
-  ui->ppmFrameLength->setMinimum(module.channelsCount*(model->extendedLimits ? 2.250 : 2)+3.5);
+  ui->ppmFrameLength->setMinimum(module.channelsCount * (model->extendedLimits ? 2.250 : 2)+3.5);
   ui->ppmFrameLength->setMaximum(firmware->getCapability(PPMFrameLength));
   ui->ppmFrameLength->setValue(22.5+((double)module.ppm.frameLength)*0.5);
 
-  // Antenna selection on Horus and xlite
-  ui->label_antenna->setVisible(mask & MASK_ANTENNA);
-  ui->antennaMode->setVisible(mask & MASK_ANTENNA);
-  if IS_HORUS_X12S(firmware->getBoard()) {
-    ui->antennaMode->setItemText(1,tr("Ext. + Int"));
+  // Antenna mode on Horus and XLite
+  if (mask & MASK_ANTENNA) {
+    ui->antennaMode->clear();
+    ui->antennaMode->addItem(tr("Ask"), -1);
+    ui->antennaMode->addItem(tr("Internal"), 0);
+    ui->antennaMode->addItem(IS_HORUS_X12S(board) ? tr("Internal + External") : tr("External"), 1);
+    ui->antennaMode->setField(module.pxx.antennaMode, this);
   }
   else {
-    ui->antennaMode->setItemText(1,tr("External"));
+    ui->antennaLabel->hide();
+    ui->antennaMode->hide();
   }
-  ui->antennaMode->setCurrentIndex(module.pxx.external_antenna);
 
   // R9M options
   ui->r9mPower->setVisible(mask & MASK_R9M);
   ui->label_r9mPower->setVisible(mask & MASK_R9M);
-  ui->warning_r9mPower->setVisible((mask & MASK_R9M) && module.subType == R9M_LBT);
+  ui->warning_r9mPower->setVisible((mask & MASK_R9M) && module.subType == MODULE_SUBTYPE_R9M_EU);
+  ui->warning_r9mFlex->setVisible((mask & MASK_R9M) && module.subType > MODULE_SUBTYPE_R9M_EU);
 
   if (mask & MASK_R9M) {
     const QSignalBlocker blocker(ui->r9mPower);
     ui->r9mPower->clear();
-    Board::Type board = firmware->getBoard();
-    if (IS_TARANIS_XLITE(board)) {
-      if (module.subType == R9M_FCC) {
-        ui->r9mPower->addItem(tr("100 mW - 16CH"));
-      }
-      else {
-        ui->r9mPower->addItem(tr("25 mW - 8CH"));
-        ui->r9mPower->addItem(tr("25 mW - 16CH"));
-        ui->r9mPower->addItem(tr("100 mW - 16CH, no telemetry"));
-      }
-    }
-    else {
-      if (module.subType == R9M_FCC) {
-        ui->r9mPower->addItem(tr("10 mW - 16CH"));
-        ui->r9mPower->addItem(tr("100 mW - 16CH"));
-        ui->r9mPower->addItem(tr("500 mW - 16CH"));
-        ui->r9mPower->addItem(tr("1000 mW - 16CH"));
-      }
-      else {
-        ui->r9mPower->addItem(tr("25 mW - 8CH"));
-        ui->r9mPower->addItem(tr("25 mW - 16CH"));
-        ui->r9mPower->addItem(tr("200 mW - 16CH"));
-        ui->r9mPower->addItem(tr("500 mW - 16CH"));
-      }
-    }
+    ui->r9mPower->addItems(ModuleData::powerValueStrings(module.subType, firmware));
     ui->r9mPower->setCurrentIndex(module.pxx.power);
   }
 
@@ -518,14 +578,24 @@ void ModulePanel::update()
   ui->multiSubType->setVisible(mask & MASK_SUBTYPES);
   if (mask & MASK_SUBTYPES) {
     unsigned numEntries = 2;  // R9M FCC/EU
-    if (mask & MASK_MULTIMODULE)
-      numEntries = (module.multi.customProto ? 8 : multiProtocols.getProtocol(module.multi.rfProtocol).numSubytes());
-
+    unsigned i = 0;
+    switch(protocol){
+    case PULSES_MULTIMODULE:
+      numEntries = (module.multi.rfProtocol > MODULE_SUBTYPE_MULTI_LAST ? 8 : pdef.numSubTypes());
+      break;
+    case PULSES_PXX_R9M:
+      if (firmware->getCapability(HasModuleR9MFlex))
+        i = 2;
+      break;
+    default:
+      break;
+    }
+    numEntries += i;
     const QSignalBlocker blocker(ui->multiSubType);
     ui->multiSubType->clear();
-    for (unsigned i=0; i < numEntries; i++)
-      ui->multiSubType->addItem(ModelPrinter::printModuleSubType(protocol, i, module.multi.rfProtocol, module.multi.customProto), i);
-    ui->multiSubType->setCurrentIndex(module.subType);
+    for ( ; i < numEntries; i++)
+      ui->multiSubType->addItem(module.subTypeToString(i), i);
+    ui->multiSubType->setCurrentIndex(ui->multiSubType->findData(module.subType));
   }
 
   // Multi settings fields
@@ -533,22 +603,50 @@ void ModulePanel::update()
   ui->multiProtocol->setVisible(mask & MASK_MULTIMODULE);
   ui->label_option->setVisible(mask & MASK_MULTIOPTION);
   ui->optionValue->setVisible(mask & MASK_MULTIOPTION);
-  ui->autoBind->setVisible(mask & MASK_MULTIMODULE);
+  ui->disableTelem->setVisible(mask & MASK_MULTIMODULE);
+  ui->disableChMap->setVisible(mask & MASK_MULTIMODULE);
   ui->lowPower->setVisible(mask & MASK_MULTIMODULE);
+  ui->autoBind->setVisible(mask & MASK_MULTIMODULE);
+  if (module.multi.rfProtocol == MODULE_SUBTYPE_MULTI_DSM2)
+    ui->autoBind->setText(tr("Autodetect Format"));
+  else
+    ui->autoBind->setText(tr("Bind on channel"));
 
   if (mask & MASK_MULTIMODULE) {
-    ui->multiProtocol->setCurrentIndex(module.multi.rfProtocol);
+    ui->multiProtocol->setCurrentIndex(ui->multiProtocol->findData(module.multi.rfProtocol));
+    ui->disableTelem->setChecked(module.multi.disableTelemetry);
+    ui->disableChMap->setChecked(module.multi.disableMapping);
     ui->autoBind->setChecked(module.multi.autoBindMode);
     ui->lowPower->setChecked(module.multi.lowPowerMode);
   }
 
   if (mask & MASK_MULTIOPTION) {
-    auto pdef = multiProtocols.getProtocol(module.multi.rfProtocol);
     ui->optionValue->setMinimum(pdef.getOptionMin());
     ui->optionValue->setMaximum(pdef.getOptionMax());
     ui->optionValue->setValue(module.multi.optionValue);
     ui->label_option->setText(qApp->translate("Multiprotocols", qPrintable(pdef.optionsstr)));
   }
+
+  if (mask & MASK_ACCESS) {
+    ui->rx1->setText(module.access.receiverName[0]);
+    ui->rx2->setText(module.access.receiverName[1]);
+    ui->rx3->setText(module.access.receiverName[2]);
+  }
+
+  ui->registrationIdLabel->setVisible(mask & MASK_ACCESS);
+  ui->registrationId->setVisible(mask & MASK_ACCESS);
+
+  ui->rx1Label->setVisible((mask & MASK_ACCESS) && (module.access.receivers & (1<<0)));
+  ui->clearRx1->setVisible((mask & MASK_ACCESS) && (module.access.receivers & (1<<0)));
+  ui->rx1->setVisible((mask & MASK_ACCESS) && (module.access.receivers & (1<<0)));
+
+  ui->rx2Label->setVisible((mask & MASK_ACCESS) && (module.access.receivers & (1<<1)));
+  ui->clearRx2->setVisible((mask & MASK_ACCESS) && (module.access.receivers & (1<<1)));
+  ui->rx2->setVisible((mask & MASK_ACCESS) && (module.access.receivers & (1<<1)));
+
+  ui->rx3Label->setVisible((mask & MASK_ACCESS) && (module.access.receivers & (1<<2)));
+  ui->clearRx3->setVisible((mask & MASK_ACCESS) && (module.access.receivers & (1<<2)));
+  ui->rx3->setVisible((mask & MASK_ACCESS) && (module.access.receivers & (1<<2)));
 
   // Failsafes
   ui->label_failsafeMode->setVisible(mask & MASK_FAILSAFES);
@@ -582,11 +680,6 @@ void ModulePanel::update()
       }
     }
   }
-
-  if (mask & MASK_CHANNELS_RANGE) {
-    ui->channelsStart->setMaximum(33 - ui->channelsCount->value());
-    ui->channelsCount->setMaximum(qMin(16, 33-ui->channelsStart->value()));
-  }
 }
 
 void ModulePanel::on_trainerMode_currentIndexChanged(int index)
@@ -600,8 +693,9 @@ void ModulePanel::on_trainerMode_currentIndexChanged(int index)
 
 void ModulePanel::onProtocolChanged(int index)
 {
-  if (!lock && module.protocol != ui->protocol->itemData(index).toInt()) {
+  if (!lock && module.protocol != ui->protocol->itemData(index).toUInt()) {
     module.protocol = ui->protocol->itemData(index).toInt();
+    module.channelsCount = getMaxChannelCount();
     update();
     emit modified();
   }
@@ -615,17 +709,9 @@ void ModulePanel::on_ppmPolarity_currentIndexChanged(int index)
   }
 }
 
-void ModulePanel::on_antennaMode_currentIndexChanged(int index)
-{
-  if (!lock && module.pxx.external_antenna != (bool)index) {
-    module.pxx.external_antenna = index;
-    emit modified();
-  }
-}
-
 void ModulePanel::on_r9mPower_currentIndexChanged(int index)
 {
-  if (!lock && module.pxx.power != index) {
+  if (!lock && module.pxx.power != (unsigned int)index) {
     module.pxx.power = index;
     emit modified();
   }
@@ -696,13 +782,15 @@ void ModulePanel::on_failsafeMode_currentIndexChanged(int value)
 
 void ModulePanel::onMultiProtocolChanged(int index)
 {
-  if (!lock && module.multi.rfProtocol != (unsigned)index) {
+  int rfProtocol = ui->multiProtocol->itemData(index).toInt();
+  if (!lock && module.multi.rfProtocol != (unsigned)rfProtocol) {
     lock=true;
-    module.multi.rfProtocol = (unsigned int) index;
-    unsigned int maxSubTypes = multiProtocols.getProtocol(index).numSubytes();
-    if (module.multi.customProto)
+    module.multi.rfProtocol = (unsigned int)rfProtocol;
+    unsigned int maxSubTypes = multiProtocols.getProtocol(index).numSubTypes();
+    if (rfProtocol > MODULE_SUBTYPE_MULTI_LAST)
       maxSubTypes=8;
     module.subType = std::min(module.subType, maxSubTypes -1);
+    module.channelsCount = getMaxChannelCount();
     update();
     emit modified();
     lock = false;
@@ -717,21 +805,33 @@ void ModulePanel::on_optionValue_editingFinished()
   }
 }
 
-void ModulePanel::on_multiSubType_currentIndexChanged(int index)
+void ModulePanel::onSubTypeChanged()
 {
-  if (!lock && module.subType != (unsigned)index) {
+  const unsigned type = ui->multiSubType->currentData().toUInt();
+  if (!lock && module.subType != type) {
     lock=true;
-    module.subType = index;
+    module.subType = type;
     update();
     emit modified();
     lock =  false;
   }
 }
 
+void ModulePanel::on_disableTelem_stateChanged(int state)
+{
+  module.multi.disableTelemetry = (state == Qt::Checked);
+}
+
+void ModulePanel::on_disableChMap_stateChanged(int state)
+{
+  module.multi.disableMapping = (state == Qt::Checked);
+}
+
 void ModulePanel::on_autoBind_stateChanged(int state)
 {
   module.multi.autoBindMode = (state == Qt::Checked);
 }
+
 void ModulePanel::on_lowPower_stateChanged(int state)
 {
   module.multi.lowPowerMode = (state == Qt::Checked);
@@ -851,6 +951,30 @@ void ModulePanel::updateFailsafe(int channel)
     setChannelFailsafeValue(channel, failsafeValue, (FAILSAFE_DISPLAY_PERCENT | FAILSAFE_DISPLAY_USEC));
 }
 
+void ModulePanel::onClearAccessRxClicked()
+{
+  QPushButton *button = qobject_cast<QPushButton *>(sender());
+
+  if (button == ui->clearRx1) {
+    module.access.receivers &= ~(1<<0);
+    ui->rx1->clear();
+    update();
+    emit modified();
+  }
+  else if (button == ui->clearRx2) {
+    module.access.receivers &= ~(1<<1);
+    ui->rx2->clear();
+    update();
+    emit modified();
+  }
+  else if (button == ui->clearRx3) {
+    module.access.receivers &= ~(1<<2);
+    ui->rx3->clear();
+    update();
+    emit modified();
+  }
+}
+
 /******************************************************************************/
 
 SetupPanel::SetupPanel(QWidget * parent, ModelData & model, GeneralSettings & generalSettings, Firmware * firmware):
@@ -877,7 +1001,7 @@ SetupPanel::SetupPanel(QWidget * parent, ModelData & model, GeneralSettings & ge
     QDir qd(path);
     if (qd.exists()) {
       QStringList filters;
-      if(IS_HORUS(board)) {
+      if(IS_FAMILY_HORUS_OR_T16(board)) {
         filters << "*.bmp" << "*.jpg" << "*.png";
         foreach ( QString file, qd.entryList(filters, QDir::Files) ) {
           QFileInfo fi(file);
@@ -908,17 +1032,17 @@ SetupPanel::SetupPanel(QWidget * parent, ModelData & model, GeneralSettings & ge
         ui->image->setCurrentIndex(ui->image->count()-1);
         QString fileName = path;
         fileName.append(model.bitmap);
-        if (!IS_HORUS(board))
+        if (!IS_FAMILY_HORUS_OR_T16(board))
           fileName.append(".bmp");
         QImage image(fileName);
-        if (image.isNull() && !IS_HORUS(board)) {
+        if (image.isNull() && !IS_FAMILY_HORUS_OR_T16(board)) {
           fileName = path;
           fileName.append(model.bitmap);
           fileName.append(".BMP");
           image.load(fileName);
         }
         if (!image.isNull()) {
-          if (IS_HORUS(board)) {
+          if (IS_FAMILY_HORUS_OR_T16(board)) {
             ui->imagePreview->setFixedSize(QSize(192, 114));
             ui->imagePreview->setPixmap(QPixmap::fromImage(image.scaled(192, 114)));
           }
@@ -937,15 +1061,19 @@ SetupPanel::SetupPanel(QWidget * parent, ModelData & model, GeneralSettings & ge
   }
 
   QWidget * prevFocus = ui->image;
+  RawSwitchFilterItemModel * swModel = new RawSwitchFilterItemModel(&generalSettings, &model, RawSwitch::TimersContext, this);
+  connect(this, &SetupPanel::updated, swModel, &RawSwitchFilterItemModel::update);
+
   for (int i=0; i<CPN_MAX_TIMERS; i++) {
     if (i<firmware->getCapability(Timers)) {
-      timers[i] = new TimerPanel(this, model, model.timers[i], generalSettings, firmware, prevFocus);
+      timers[i] = new TimerPanel(this, model, model.timers[i], generalSettings, firmware, prevFocus, swModel);
       ui->gridLayout->addWidget(timers[i], 1+i, 1);
       connect(timers[i], &TimerPanel::modified, this, &SetupPanel::modified);
+      connect(this, &SetupPanel::updated, timers[i], &TimerPanel::update);
       prevFocus = timers[i]->getLastFocus();
     }
     else {
-      foreach(QLabel *label, findChildren<QLabel *>(QRegExp(QString("label_timer%1").arg(i+1)))) {
+      foreach(QLabel *label, findChildren<QLabel *>(QRegularExpression(QString("label_timer%1").arg(i+1)))) {
         label->hide();
       }
     }
@@ -1071,7 +1199,7 @@ SetupPanel::SetupPanel(QWidget * parent, ModelData & model, GeneralSettings & ge
     ui->trimsDisplay->hide();
   }
 
-  for (int i=0; i<firmware->getCapability(NumModules); i++) {
+  for (int i=firmware->getCapability(NumFirstUsableModule); i<firmware->getCapability(NumModules); i++) {
     modules[i] = new ModulePanel(this, model, model.moduleData[i], generalSettings, firmware, i);
     ui->modulesLayout->addWidget(modules[i]);
     connect(modules[i], &ModulePanel::modified, this, &SetupPanel::modified);
@@ -1128,7 +1256,7 @@ void SetupPanel::on_trimIncrement_currentIndexChanged(int index)
 void SetupPanel::on_throttleSource_currentIndexChanged(int index)
 {
   if (!lock) {
-    model->thrTraceSrc = index;
+    model->thrTraceSrc = ui->throttleSource->currentData().toUInt();
     emit modified();
   }
 }
@@ -1153,17 +1281,17 @@ void SetupPanel::on_image_currentIndexChanged(int index)
     if (qd.exists()) {
       QString fileName=path;
       fileName.append(model->bitmap);
-      if (!IS_HORUS(board))
+      if (!IS_FAMILY_HORUS_OR_T16(board))
         fileName.append(".bmp");
       QImage image(fileName);
-      if (image.isNull() && !IS_HORUS(board)) {
+      if (image.isNull() && !IS_FAMILY_HORUS_OR_T16(board)) {
         fileName=path;
         fileName.append(model->bitmap);
         fileName.append(".BMP");
         image.load(fileName);
       }
       if (!image.isNull()) {
-        if (IS_HORUS(board)) {
+        if (IS_FAMILY_HORUS_OR_T16(board)) {
           ui->imagePreview->setFixedSize(QSize(192, 114));
           ui->imagePreview->setPixmap(QPixmap::fromImage(image.scaled(192, 114)));
         }
@@ -1188,14 +1316,20 @@ void SetupPanel::populateThrottleSourceCB()
   Board::Type board = firmware->getBoard();
   lock = true;
   ui->throttleSource->clear();
-  ui->throttleSource->addItem(tr("THR"));
-  for (int i=0; i<getBoardCapability(board, Board::Pots)+getBoardCapability(board, Board::Sliders); i++) {
-    ui->throttleSource->addItem(firmware->getAnalogInputName(4+i), i);
+  ui->throttleSource->addItem(tr("THR"), 0);
+
+  int idx=1;
+  for (int i=0; i<getBoardCapability(board, Board::Pots)+getBoardCapability(board, Board::Sliders); i++, idx++) {
+    if (RawSource(SOURCE_TYPE_STICK,4+i).isAvailable(model,&generalSettings,board)) {
+      ui->throttleSource->addItem(firmware->getAnalogInputName(4+i), idx);
+    }
   }
-  for (int i=0; i<firmware->getCapability(Outputs); i++) {
-    ui->throttleSource->addItem(RawSource(SOURCE_TYPE_CH, i).toString(model, &generalSettings));
+  for (int i=0; i<firmware->getCapability(Outputs); i++, idx++) {
+    ui->throttleSource->addItem(RawSource(SOURCE_TYPE_CH, i).toString(model, &generalSettings), idx);
   }
-  ui->throttleSource->setCurrentIndex(model->thrTraceSrc);
+
+  int thrTraceSrcIdx = ui->throttleSource->findData(model->thrTraceSrc);
+  ui->throttleSource->setCurrentIndex(thrTraceSrcIdx);
   lock = false;
 }
 
@@ -1219,15 +1353,13 @@ void SetupPanel::update()
     updatePotWarnings();
   }
 
-  for (int i=0; i<firmware->getCapability(Timers); i++) {
-    timers[i]->update();
-  }
-
   for (int i=0; i<CPN_MAX_MODULES+1; i++) {
     if (modules[i]) {
       modules[i]->update();
     }
   }
+
+  emit updated();
 }
 
 void SetupPanel::updateBeepCenter()
@@ -1327,7 +1459,7 @@ void SetupPanel::updatePotWarnings()
   for (int i=0; i<potWarningCheckboxes.size(); i++) {
     QCheckBox *checkbox = potWarningCheckboxes[i];
     int index = checkbox->property("index").toInt();
-    checkbox->setChecked(!model->potsWarningEnabled[index]);
+    checkbox->setChecked(!model->potsWarnEnabled[index]);
     checkbox->setDisabled(model->potsWarningMode == 0);
   }
   lock = false;
@@ -1337,7 +1469,7 @@ void SetupPanel::potWarningToggled(bool checked)
 {
   if (!lock) {
     int index = sender()->property("index").toInt();
-    model->potsWarningEnabled[index] = !checked;
+    model->potsWarnEnabled[index] = !checked;
     updatePotWarnings();
     emit modified();
   }
@@ -1385,6 +1517,14 @@ void SetupPanel::onBeepCenterToggled(bool checked)
 
 void SetupPanel::on_editText_clicked()
 {
-  ChecklistDialog *g = new ChecklistDialog(this, ui->name->text());
-  g->exec();
+  const QString path = Helpers::getChecklistsPath();
+  QDir d(path);
+  if (!d.exists()) {
+    QMessageBox::critical(this, tr("Profile Settings"), tr("SD structure path not specified or invalid"));
+  }
+  else {
+    ChecklistDialog *g = new ChecklistDialog(this, model);
+    g->exec();
+  }
 }
+

@@ -60,7 +60,7 @@
 /* Lock / unlock functions                                               */
 /*-----------------------------------------------------------------------*/
 #if !defined(BOOT)
-static OS_MutexID ioMutex;
+static RTOS_MUTEX_HANDLE ioMutex;
 
 int ff_cre_syncobj (BYTE vol, _SYNC_t *mutex)
 {
@@ -70,12 +70,13 @@ int ff_cre_syncobj (BYTE vol, _SYNC_t *mutex)
 
 int ff_req_grant (_SYNC_t mutex)
 {
-  return CoEnterMutexSection(mutex) == E_OK;
+  RTOS_LOCK_MUTEX(mutex);
+  return 1;
 }
 
 void ff_rel_grant (_SYNC_t mutex)
 {
-  CoLeaveMutexSection(mutex);
+  RTOS_UNLOCK_MUTEX(mutex);
 }
 
 int ff_del_syncobj (_SYNC_t mutex)
@@ -977,8 +978,13 @@ void sdPoll10ms()
 // TODO everything here should not be in the driver layer ...
 
 FATFS g_FATFS_Obj;
+
 #if defined(LOG_TELEMETRY)
 FIL g_telemetryFile = {};
+#endif
+
+#if defined(LOG_BLUETOOTH)
+FIL g_bluetoothFile = {};
 #endif
 
 #if defined(BOOT)
@@ -1015,6 +1021,13 @@ void sdMount()
       f_lseek(&g_telemetryFile, f_size(&g_telemetryFile)); // append
     }
 #endif
+
+#if defined(LOG_BLUETOOTH)
+    f_open(&g_bluetoothFile, LOGS_PATH "/bluetooth.log", FA_OPEN_ALWAYS | FA_WRITE);
+    if (f_size(&g_bluetoothFile) > 0) {
+      f_lseek(&g_bluetoothFile, f_size(&g_bluetoothFile)); // append
+    }
+#endif
   }
 }
 
@@ -1025,7 +1038,10 @@ void sdDone()
 #if defined(LOG_TELEMETRY)
     f_close(&g_telemetryFile);
 #endif
-    f_mount(NULL, "", 0); // unmount SD
+#if defined(LOG_BLUETOOTH)
+    f_close(&g_bluetoothFile);
+#endif
+    f_mount(nullptr, "", 0); // unmount SD
   }
 }
 #endif

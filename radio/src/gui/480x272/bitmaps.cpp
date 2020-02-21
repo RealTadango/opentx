@@ -64,6 +64,14 @@ const uint8_t LBM_TOPMENU_TXBATT[] = {
 #include "mask_txbat.lbm"
 };
 
+const uint8_t LBM_TOPMENU_TXBATT_CHARGING[] = {
+#include "mask_txbat_charging.lbm"
+};
+
+const uint8_t LBM_TOPMENU_ANTENNA[] = {
+#include "mask_antenna.lbm"
+};
+
 const uint8_t LBM_HTRIM_FRAME[] = {
 #include "mask_htrim_frame.lbm"
 };
@@ -140,23 +148,23 @@ const uint8_t LBM_SHUTDOWN_CIRCLE[] = {
 #include "mask_shutdown_circle.lbm"
 };
 
-const uint8_t LBM_SLIDER_BAR_LEFT[] __ALIGNED = {
+const uint8_t LBM_SLIDER_BAR_LEFT[] __ALIGNED(4) = {
 #include "bar_left.lbm"
 };
 
-const uint8_t LBM_SLIDER_BAR_RIGHT[] __ALIGNED = {
+const uint8_t LBM_SLIDER_BAR_RIGHT[] __ALIGNED(4) = {
 #include "bar_right.lbm"
 };
 
-const uint8_t LBM_SLIDER_POINT_OUT[] __ALIGNED = {
+const uint8_t LBM_SLIDER_POINT_OUT[] __ALIGNED(4) = {
 #include "point_out.lbm"
 };
 
-const uint8_t LBM_SLIDER_POINT_MID[] __ALIGNED = {
+const uint8_t LBM_SLIDER_POINT_MID[] __ALIGNED(4) = {
 #include "point_mid.lbm"
 };
 
-const uint8_t LBM_SLIDER_POINT_IN[] __ALIGNED = {
+const uint8_t LBM_SLIDER_POINT_IN[] __ALIGNED(4) = {
 #include "point_in.lbm"
 };
 

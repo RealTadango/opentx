@@ -39,7 +39,7 @@
 
 
 event_t s_evt;
-struct t_inactivity inactivity = {0};
+struct InactivityData inactivity = {0};
 Key keys[NUM_KEYS];
 
 event_t getEvent(bool trim)
@@ -85,6 +85,7 @@ void Key::input(bool val)
         m_cnt = 0;
       }
       break;
+
     case KSTATE_START:
       // TRACE("key %d FIRST", key());
       putEvent(EVT_KEY_FIRST(key()));
@@ -163,23 +164,23 @@ void pauseEvents(event_t event)
 // Disables any further event generation (BREAK and REPEAT) for this key, until the key is released
 void killEvents(event_t event)
 {
-#if defined(ROTARY_ENCODERS)
-  if (event == EVT_ROTARY_LONG) {
-    killEvents(BTN_REa + g_eeGeneral.reNavigation - 1);
-    return;
-  }
-#endif
-
   event = EVT_KEY_MASK(event);
   if (event < (int)DIM(keys)) {
     keys[event].killEvents();
   }
 }
 
-bool clearKeyEvents()
+void killAllEvents()
+{
+  for (uint8_t key = 0; key < DIM(keys); key++) {
+    keys[key].killEvents();
+  }
+}
+
+bool waitKeysReleased()
 {
 #if defined(PCBSKY9X)
-  CoTickDelay(100);  // 200ms
+  RTOS_WAIT_MS(200); // 200ms
 #endif
 
   // loop until all keys are up
@@ -188,12 +189,7 @@ bool clearKeyEvents()
 #endif
 
   while (keyDown()) {
-
-#if defined(SIMU)
-    SIMU_SLEEP_NORET(1/*ms*/);
-#else
-    wdt_reset();
-#endif
+    WDG_RESET();
 
 #if !defined(BOOT)
     if ((get_tmr10ms() - start) >= 300) {  // wait no more than 3 seconds

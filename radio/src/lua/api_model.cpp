@@ -2,7 +2,7 @@
  * Copyright (C) OpenTX
  *
  * Based on code named
- *   th9x - http://code.google.com/p/th9x 
+ *   th9x - http://code.google.com/p/th9x
  *   er9x - http://code.google.com/p/er9x
  *   gruvin9x - http://code.google.com/p/gruvin9x
  *
@@ -48,11 +48,11 @@ static int luaModelGetInfo(lua_State *L)
 /*luadoc
 @function model.setInfo(value)
 
-Set the current Model information 
+Set the current Model information
 
 @param value model information data, see model.getInfo()
 
-@notice If a parameter is missing from the value, then 
+@notice If a parameter is missing from the value, then
 that parameter remains unchanged.
 
 @status current Introduced in 2.0.6, changed in TODO
@@ -86,7 +86,7 @@ static int luaModelSetInfo(lua_State *L)
 
 Get RF module parameters
 
-`rfProtocol` values:
+`subType` values:
  * -1 OFF
  * 0 D16
  * 1 D8
@@ -97,7 +97,7 @@ Get RF module parameters
 @retval nil requested module does not exist
 
 @retval table module parameters:
- * `rfProtocol` (number) protocol index
+ * `subType` (number) protocol index
  * `modelId` (number) receiver number
  * `firstChannel` (number) start channel (0 is CH1)
  * `channelsCount` (number) number of channels sent to module
@@ -110,7 +110,7 @@ static int luaModelGetModule(lua_State *L)
   if (idx < NUM_MODULES) {
     ModuleData & module = g_model.moduleData[idx];
     lua_newtable(L);
-    lua_pushtableinteger(L, "rfProtocol", module.rfProtocol);
+    lua_pushtableinteger(L, "subType", module.subType);
     lua_pushtableinteger(L, "modelId", g_model.header.modelId[idx]);
     lua_pushtableinteger(L, "firstChannel", module.channelsStart);
     lua_pushtableinteger(L, "channelsCount", module.channelsCount + 8);
@@ -130,7 +130,7 @@ Set RF module parameters
 
 @param value module parameters, see model.getModule()
 
-@notice If a parameter is missing from the value, then 
+@notice If a parameter is missing from the value, then
 that parameter remains unchanged.
 
 @status current Introduced in TODO
@@ -145,8 +145,8 @@ static int luaModelSetModule(lua_State *L)
     for (lua_pushnil(L); lua_next(L, -2); lua_pop(L, 1)) {
       luaL_checktype(L, -2, LUA_TSTRING); // key is string
       const char * key = luaL_checkstring(L, -2);
-      if (!strcmp(key, "rfProtocol")) {
-        module.rfProtocol = luaL_checkinteger(L, -1);
+      if (!strcmp(key, "subType")) {
+        module.subType = luaL_checkinteger(L, -1);
       }
       else if (!strcmp(key, "modelId")) {
         g_model.header.modelId[idx] = luaL_checkinteger(L, -1);
@@ -182,8 +182,9 @@ Get model timer parameters
  * `countdownBeep` (number) countdown beep (0­ = silent, 1 =­ beeps, 2­ = voice)
  * `minuteBeep` (boolean) minute beep
  * `persistent` (number) persistent timer
+ * `name` (string) timer name
 
-@status current Introduced in 2.0.0
+@status current Introduced in 2.0.0, name added in 2.3.6
 */
 static int luaModelGetTimer(lua_State *L)
 {
@@ -197,6 +198,7 @@ static int luaModelGetTimer(lua_State *L)
     lua_pushtableinteger(L, "countdownBeep", timer.countdownBeep);
     lua_pushtableboolean(L, "minuteBeep", timer.minuteBeep);
     lua_pushtableinteger(L, "persistent", timer.persistent);
+    lua_pushtablezstring(L, "name", timer.name);
   }
   else {
     lua_pushnil(L);
@@ -213,10 +215,10 @@ Set model timer parameters
 
 @param value timer parameters, see model.getTimer()
 
-@notice If a parameter is missing from the value, then 
+@notice If a parameter is missing from the value, then
 that parameter remains unchanged.
 
-@status current Introduced in 2.0.0
+@status current Introduced in 2.0.0, name added in 2.3.6
 */
 static int luaModelSetTimer(lua_State *L)
 {
@@ -245,6 +247,10 @@ static int luaModelSetTimer(lua_State *L)
       }
       else if (!strcmp(key, "persistent")) {
         timer.persistent = luaL_checkinteger(L, -1);
+      }
+      if (!strcmp(key, "name")) {
+        const char * name = luaL_checkstring(L, -1);
+        str2zchar(timer.name, name, sizeof(timer.name));
       }
     }
     storageDirty(EE_MODEL);
@@ -300,7 +306,7 @@ static unsigned int getInputsCount(unsigned int chn)
 /*luadoc
 @function model.getInputsCount(input)
 
-Return number of lines for given input 
+Return number of lines for given input
 
 @param input (unsigned number) input number (use 0 for Input1)
 
@@ -319,7 +325,7 @@ static int luaModelGetInputsCount(lua_State *L)
 /*luadoc
 @function model.getInput(input, line)
 
-Return input data for given input and line number 
+Return input data for given input and line number
 
 @param input (unsigned number) input number (use 0 for Input1)
 
@@ -330,11 +336,14 @@ Return input data for given input and line number
 @retval table input data:
  * `name` (string) input line name
  * `source` (number) input source index
- * `weight` (number) input weight 
- * `offset` (number) input offset 
+ * `weight` (number) input weight
+ * `offset` (number) input offset
  * `switch` (number) input switch index
+ * `curveType` (number) curve type (function, expo, custom curve)
+ * `curveValue` (number) curve index
+ * `carryTrim` (boolean) input trims applied
 
-@status current Introduced in 2.0.0, `switch` added in TODO
+@status current Introduced in 2.0.0, curveType/curveValue/carryTrim added in 2.3
 */
 static int luaModelGetInput(lua_State *L)
 {
@@ -350,6 +359,9 @@ static int luaModelGetInput(lua_State *L)
     lua_pushtableinteger(L, "weight", expo->weight);
     lua_pushtableinteger(L, "offset", expo->offset);
     lua_pushtableinteger(L, "switch", expo->swtch);
+    lua_pushtableinteger(L, "curveType", expo->curve.type);
+    lua_pushtableinteger(L, "curveValue", expo->curve.value);
+    lua_pushtableinteger(L, "carryTrim", expo->carryTrim);
   }
   else {
     lua_pushnil(L);
@@ -368,7 +380,7 @@ Insert an Input at specified line
 
 @param value (table) input data, see model.getInput()
 
-@status current Introduced in 2.0.0, `switch` added in TODO
+@status current Introduced in 2.0.0, curveType/curveValue/carryTrim added in 2.3
 */
 static int luaModelInsertInput(lua_State *L)
 {
@@ -402,6 +414,15 @@ static int luaModelInsertInput(lua_State *L)
       }
       else if (!strcmp(key, "switch")) {
         expo->swtch = luaL_checkinteger(L, -1);
+      }
+      else if (!strcmp(key, "curveType")) {
+        expo->curve.type = luaL_checkinteger(L, -1);
+      }
+      else if (!strcmp(key, "curveValue")) {
+        expo->curve.value = luaL_checkinteger(L, -1);
+      }
+      else if (!strcmp(key, "carryTrim")) {
+        expo->carryTrim = lua_toboolean(L, -1);
       }
     }
   }
@@ -438,7 +459,7 @@ static int luaModelDeleteInput(lua_State *L)
 /*luadoc
 @function model.deleteInputs()
 
-Delete all Inputs 
+Delete all Inputs
 
 @status current Introduced in 2.0.0
 */
@@ -491,7 +512,7 @@ static unsigned int getMixesCount(unsigned int chn)
 /*luadoc
 @function model.getMixesCount(channel)
 
-Get the number of Mixer lines that the specified Channel has 
+Get the number of Mixer lines that the specified Channel has
 
 @param channel (unsigned number) channel number (use 0 for CH1)
 
@@ -510,7 +531,7 @@ static int luaModelGetMixesCount(lua_State *L)
 /*luadoc
 @function model.getMix(channel, line)
 
-Get configuration for specified Mix  
+Get configuration for specified Mix
 
 @param channel (unsigned number) channel number (use 0 for CH1)
 
@@ -571,7 +592,7 @@ static int luaModelGetMix(lua_State *L)
 /*luadoc
 @function model.insertMix(channel, line, value)
 
-Insert a mixer line into Channel   
+Insert a mixer line into Channel
 
 @param channel (unsigned number) channel number (use 0 for CH1)
 
@@ -653,7 +674,7 @@ static int luaModelInsertMix(lua_State *L)
 /*luadoc
 @function model.deleteMix(channel, line)
 
-Delete mixer line from specified Channel  
+Delete mixer line from specified Channel
 
 @param channel (unsigned number) channel number (use 0 for CH1)
 
@@ -732,7 +753,7 @@ static int luaModelGetLogicalSwitch(lua_State *L)
 /*luadoc
 @function model.setLogicalSwitch(switch, value)
 
-Set Logical Switch parameters 
+Set Logical Switch parameters
 
 @param switch (unsigned number) logical switch number (use 0 for LS1)
 
@@ -1059,11 +1080,11 @@ Get Custom Function parameters
  * `func` (number) function index
  * `name` (string)  Name of track to play (only returned only returned if action is play track, sound or script)
  * `value` (number) value (only returned only returned if action is **not** play track, sound or script)
- * `mode` (number) mode (only returned only returned if action is **not** play track, sound or script) 
+ * `mode` (number) mode (only returned only returned if action is **not** play track, sound or script)
  * `param` (number) parameter (only returned only returned if action is **not** play track, sound or script)
  * `active` (number) 0 = disabled, 1 = enabled
 
-@status current Introduced in 2.0.0, TODO rename function 
+@status current Introduced in 2.0.0, TODO rename function
 */
 static int luaModelGetCustomFunction(lua_State *L)
 {
@@ -1098,10 +1119,10 @@ Set Custom Function parameters
 
 @param value (table) custom function parameters, see model.getCustomFunction() for table format
 
-@notice If a parameter is missing from the value, then 
+@notice If a parameter is missing from the value, then
 that parameter remains unchanged.
 
-@status current Introduced in 2.0.0, TODO rename function 
+@status current Introduced in 2.0.0, TODO rename function
 */
 static int luaModelSetCustomFunction(lua_State *L)
 {
@@ -1160,8 +1181,8 @@ Get servo parameters
  * `symetrical` (number) linear Subtrim 0 = Off, 1 = On
  * `revert` (number) irection 0 = ­­­---, 1 = INV
  * `curve`
-   * (number) Curve number (0 for Curve1) 
-   * or `nil` if no curve set 
+   * (number) Curve number (0 for Curve1)
+   * or `nil` if no curve set
 
 @status current Introduced in 2.0.0
 */
@@ -1196,7 +1217,7 @@ Set servo parameters
 
 @param value (table) servo parameters, see model.getOutput() for table format
 
-@notice If a parameter is missing from the value, then 
+@notice If a parameter is missing from the value, then
 that parameter remains unchanged.
 
 @status current Introduced in 2.0.0
@@ -1304,6 +1325,50 @@ static int luaModelSetGlobalVariable(lua_State *L)
   return 0;
 }
 
+/*luadoc
+@function model.getSensor(sensor)
+
+Get Telemetry Sensor parameters
+
+@param sensor (unsigned number) sensor number (use 0 for sensor 1)
+
+@retval nil requested logical switch does not exist
+
+@retval table logical switch data:
+ * `func` (number) function index
+ * `v1` (number) V1 value (index)
+ * `v2` (number) V2 value (index or value)
+ * `v3` (number) V3 value (index or value)
+ * `and` (number) AND switch index
+ * `delay` (number) delay (time in 1/10 s)
+ * `duration` (number) duration (time in 1/10 s)
+
+@status current Introduced in 2.3.0
+*/
+static int luaModelGetSensor(lua_State *L)
+{
+  unsigned int idx = luaL_checkunsigned(L, 1);
+  if (idx < MAX_TELEMETRY_SENSORS) {
+    TelemetrySensor & sensor = g_model.telemetrySensors[idx];
+    lua_newtable(L);
+    lua_pushtableinteger(L, "type", sensor.type);
+    lua_pushtablezstring(L, "name", sensor.label);
+    lua_pushtableinteger(L, "unit", sensor.unit);
+    lua_pushtableinteger(L, "prec", sensor.prec);
+    if (sensor.type == TELEM_TYPE_CUSTOM) {
+      lua_pushtableinteger(L, "id", sensor.id);
+      lua_pushtableinteger(L, "instance", sensor.instance);
+    }
+    else {
+      lua_pushtableinteger(L, "formula", sensor.formula);
+    }
+  }
+  else {
+    lua_pushnil(L);
+  }
+  return 1;
+}
+
 const luaL_Reg modelLib[] = {
   { "getInfo", luaModelGetInfo },
   { "setInfo", luaModelSetInfo },
@@ -1333,5 +1398,6 @@ const luaL_Reg modelLib[] = {
   { "setOutput", luaModelSetOutput },
   { "getGlobalVariable", luaModelGetGlobalVariable },
   { "setGlobalVariable", luaModelSetGlobalVariable },
+  { "getSensor", luaModelGetSensor },
   { NULL, NULL }  /* sentinel */
 };

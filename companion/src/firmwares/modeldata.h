@@ -74,7 +74,7 @@ class TimerData {
     unsigned int val;
     unsigned int persistent;
     int          pvalue;
-    void clear() { memset(this, 0, sizeof(TimerData)); mode = RawSwitch(SWITCH_TYPE_TIMER_MODE, 0); }
+    void clear() { memset(reinterpret_cast<void *>(this), 0, sizeof(TimerData)); mode = RawSwitch(SWITCH_TYPE_TIMER_MODE, 0); }
     void convert(RadioDataConversionState & cstate);
 };
 
@@ -86,7 +86,7 @@ class ScriptData {
     char    filename[10+1];
     char    name[10+1];
     int     inputs[CPN_MAX_SCRIPT_INPUTS];
-    void clear() { memset(this, 0, sizeof(ScriptData)); }
+    void clear() { memset(reinterpret_cast<void *>(this), 0, sizeof(ScriptData)); }
 };
 
 /*
@@ -123,6 +123,9 @@ enum TrainerMode {
   TRAINER_MODE_MASTER_SBUS_EXTERNAL_MODULE,
   TRAINER_MODE_MASTER_CPPM_EXTERNAL_MODULE,
   TRAINER_MODE_MASTER_BATTERY_COMPARTMENT,
+  TRAINER_MODE_MASTER_BLUETOOTH,
+  TRAINER_MODE_SLAVE_BLUETOOTH,
+  TRAINER_MODE_MULTI
 };
 
 class ModelData {
@@ -171,20 +174,21 @@ class ModelData {
     ExpoData  expoData[CPN_MAX_EXPOS];
 
     CurveData curves[CPN_MAX_CURVES];
-    LogicalSwitchData  logicalSw[CPN_MAX_LOGICAL_SWITCHES];
+    LogicalSwitchData logicalSw[CPN_MAX_LOGICAL_SWITCHES];
     CustomFunctionData customFn[CPN_MAX_SPECIAL_FUNCTIONS];
     SwashRingData swashRingData;
     unsigned int thrTraceSrc;
     uint64_t switchWarningStates;
     unsigned int switchWarningEnable;
     unsigned int potsWarningMode;
-    bool potsWarningEnabled[CPN_MAX_POTS];
-    int          potPosition[CPN_MAX_POTS];
-    bool         displayChecklist;
+    bool potsWarnEnabled[CPN_MAX_POTS];
+    int potsWarnPosition[CPN_MAX_POTS];
+    bool displayChecklist;
     GVarData gvarData[CPN_MAX_GVARS];
     MavlinkData mavlink;
     unsigned int telemetryProtocol;
     FrSkyData frsky;
+    unsigned int  rssiSource;
     RSSIAlarmData rssiAlarms;
 
     char bitmap[10+1];
@@ -202,6 +206,8 @@ class ModelData {
     CustomScreenData customScreenData[5];
 
     TopbarData topbarData;
+
+    char registrationId[8+1];
 
     void clear();
     bool isEmpty() const;

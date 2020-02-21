@@ -81,7 +81,6 @@ enum PortuguesePrompts {
   PT_PROMPT_FEET_PER_SECOND = PT_PROMPT_UNITS_BASE+UNIT_FEET_PER_SECOND,
 };
 
-#if defined(VOICE)
 
   #define PT_PUSH_UNIT_PROMPT(u) pt_pushUnitPrompt((u), id)
 
@@ -96,7 +95,6 @@ I18N_PLAY_FUNCTION(pt, playNumber, getvalue_t number, uint8_t unit, uint8_t att)
     PUSH_NUMBER_PROMPT(PT_PROMPT_MENOS);
     number = -number;
   }
-
 
   int8_t mode = MODE(att);
   if (mode > 0) {
@@ -128,13 +126,20 @@ I18N_PLAY_FUNCTION(pt, playNumber, getvalue_t number, uint8_t unit, uint8_t att)
     if (number == 0)
       number = -1;
   }
-  if (number >= 100) {
-    PUSH_NUMBER_PROMPT(PT_PROMPT_CENTO + number/100);
+
+  if (number > 100) {
+    PUSH_NUMBER_PROMPT(PT_PROMPT_CEM + number/100);
     number %= 100;
     if (number == 0)
       number = -1;
   }
-  PUSH_NUMBER_PROMPT(PT_PROMPT_ZERO+number);
+
+  if (number == 100) {
+    PUSH_NUMBER_PROMPT(PT_PROMPT_CEM);
+  }
+  else {
+    PUSH_NUMBER_PROMPT(PT_PROMPT_ZERO + number);
+  }
 
   if (unit) {
     PT_PUSH_UNIT_PROMPT(unit);
@@ -189,4 +194,3 @@ I18N_PLAY_FUNCTION(pt, playDuration, int seconds PLAY_DURATION_ATT)
 
 LANGUAGE_PACK_DECLARE(pt, "Portugues");
 
-#endif

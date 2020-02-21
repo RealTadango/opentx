@@ -86,6 +86,9 @@ void onLimitsMenu(const char *result)
     copyTrimsToOffset(ch);
     storageDirty(EE_MODEL);
   }
+  else if (result == STR_COPY_MIN_MAX_TO_OUTPUTS) {
+    copyMinMaxToOutputs(ch);
+  }
 }
 
 void menuModelLimits(event_t event)
@@ -142,13 +145,13 @@ void menuModelLimits(event_t event)
       POPUP_MENU_ADD_ITEM(STR_RESET);
       POPUP_MENU_ADD_ITEM(STR_COPY_TRIMS_TO_OFS);
       POPUP_MENU_ADD_ITEM(STR_COPY_STICKS_TO_OFS);
+      POPUP_MENU_ADD_ITEM(STR_COPY_MIN_MAX_TO_OUTPUTS);
       POPUP_MENU_START(onLimitsMenu);
     }
 
     for (int j=0; j<ITEM_LIMITS_COUNT; j++) {
       LcdFlags attr = ((sub==k && menuHorizontalPosition==j) ? ((s_editMode>0) ? BLINK|INVERS : INVERS) : 0);
       uint8_t active = (attr && s_editMode>0) ;
-      if (active) STICK_SCROLL_DISABLE();
       switch(j)
       {
         case ITEM_LIMITS_CH_NAME:

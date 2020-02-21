@@ -41,12 +41,7 @@
 
 using namespace Board;
 
-template<typename T, size_t N>
-inline
-size_t SizeOfArray(T(&)[N])
-{
-  return N;
-}
+QList<OpenTxEepromInterface *> opentxEEpromInterfaces;
 
 OpenTxEepromInterface::OpenTxEepromInterface(OpenTxFirmware * firmware):
   EEPROMInterface(firmware->getBoard()),
@@ -63,34 +58,52 @@ OpenTxEepromInterface::~OpenTxEepromInterface()
 const char * OpenTxEepromInterface::getName()
 {
   switch (board) {
-    case BOARD_STOCK:
+    case BOARD_9X_M64:
       return "OpenTX for 9X board";
-    case BOARD_M128:
+    case BOARD_9X_M128:
       return "OpenTX for M128 / 9X board";
     case BOARD_MEGA2560:
       return "OpenTX for MEGA2560 board";
     case BOARD_GRUVIN9X:
       return "OpenTX for Gruvin9x board / 9X";
+    case BOARD_JUMPER_T12:
+      return "OpenTX for Jumper T12";
+    case BOARD_JUMPER_T16:
+      return "OpenTX for Jumper T16";
+    case BOARD_RADIOMASTER_TX16S:
+      return "OpenTX for Radiomaster TX16S";
     case BOARD_TARANIS_X9D:
       return "OpenTX for FrSky Taranis X9D";
     case BOARD_TARANIS_X9DP:
       return "OpenTX for FrSky Taranis X9D+";
+    case BOARD_TARANIS_X9DP_2019:
+      return "OpenTX for FrSky Taranis X9D+ 2019";
     case BOARD_TARANIS_X9E:
       return "OpenTX for FrSky Taranis X9E";
     case BOARD_TARANIS_X7:
       return "OpenTX for FrSky Taranis X7";
+    case BOARD_TARANIS_X7_ACCESS:
+      return "OpenTX for FrSky Taranis X7 Access";
+    case BOARD_TARANIS_X9LITES:
+      return "OpenTX for FrSky Taranis X9-Lite S";
+    case BOARD_TARANIS_X9LITE:
+      return "OpenTX for FrSky Taranis X9-Lite";
     case BOARD_TARANIS_XLITE:
       return "OpenTX for FrSky Taranis X-Lite";
+    case BOARD_TARANIS_XLITES:
+      return "OpenTX for FrSky Taranis X-Lite S/Pro";
     case BOARD_SKY9X:
       return "OpenTX for Sky9x board / 9X";
     case BOARD_9XRPRO:
       return "OpenTX for 9XR-PRO";
     case BOARD_AR9X:
       return "OpenTX for ar9x board / 9X";
-    case BOARD_X12S:
+    case BOARD_HORUS_X12S:
       return "OpenTX for FrSky Horus";
     case BOARD_X10:
       return "OpenTX for FrSky X10";
+    case BOARD_X10_EXPRESS:
+      return "OpenTX for FrSky X10 Express";
     default:
       return "OpenTX for an unknown board";
   }
@@ -137,7 +150,7 @@ bool OpenTxEepromInterface::saveToByteArray(const T & src, QByteArray & data, ui
   QByteArray raw;
   T srcCopy(src); // work on a copy of radio data, because Export() will modify it!
   M manager(srcCopy, board, version, 0);
-  // manager.Dump();
+  // manager.dump();
   manager.Export(raw);
   data.resize(8);
   *((uint32_t*)&data.data()[0]) = Boards::getFourCC(board);
@@ -155,7 +168,7 @@ bool OpenTxEepromInterface::loadFromByteArray(T & dest, const QByteArray & data,
   if (manager.Import(data) != 0) {
     return false;
   }
-  // manager.Dump(); // Dumps the structure so that it's easy to check with firmware datastructs.h
+  // manager.dump(); // Dumps the structure so that it's easy to check with firmware datastructs.h
   return true;
 }
 
@@ -164,7 +177,7 @@ bool OpenTxEepromInterface::loadFromByteArray(T & dest, const QByteArray & data)
 {
   uint32_t fourcc = *((uint32_t*)&data.data()[0]);
   if (Boards::getFourCC(board) != fourcc) {
-    if (IS_HORUS(board) && fourcc == 0x3178396F) {
+    if (IS_FAMILY_HORUS_OR_T16(board) && fourcc == 0x3178396F) {
       qDebug() << QString().sprintf("%s: Deprecated fourcc used %x vs %x", getName(), fourcc, Boards::getFourCC(board));
     }
     else {
@@ -233,7 +246,6 @@ unsigned long OpenTxEepromInterface::load(RadioData &radioData, const uint8_t * 
   if (version_error == OLD_VERSION) {
     errors.set(version_error);
     errors.set(HAS_WARNINGS);
-    showEepromWarnings(NULL, CPN_STR_TTL_WARNING, errors.to_ulong());
   }
   else if (version_error == NOT_OPENTX) {
     dbg << " not open9x";
@@ -269,14 +281,14 @@ unsigned long OpenTxEepromInterface::load(RadioData &radioData, const uint8_t * 
 uint8_t OpenTxEepromInterface::getLastDataVersion(Board::Type board)
 {
   switch (board) {
-    case BOARD_STOCK:
+    case BOARD_9X_M64:
       return 216;
     case BOARD_GRUVIN9X:
     case BOARD_MEGA2560:
-    case BOARD_M128:
+    case BOARD_9X_M128:
       return 217;
     default:
-      return 218;
+      return 219;
   }
 }
 
@@ -313,21 +325,36 @@ int OpenTxEepromInterface::save(uint8_t * eeprom, const RadioData & radioData, u
 
   efile->EeFsCreate(eeprom, size, board, version);
 
-  if (board == BOARD_M128) {
+  if (board == BOARD_9X_M128) {
     variant |= M128_VARIANT;
   }
   else if (IS_TARANIS_X9E(board)) {
     variant |= TARANIS_X9E_VARIANT;
   }
+  else if (IS_TARANIS_X9LITES(board)) {
+    variant |= TARANIS_X9LITES_VARIANT;
+  }
+  else if (IS_TARANIS_X9LITE(board)) {
+    variant |= TARANIS_X9LITE_VARIANT;
+  }
+  else if (IS_TARANIS_X7_ACCESS(board)) {
+    variant |= TARANIS_X7_VARIANT;
+  }
   else if (IS_TARANIS_X7(board)) {
     variant |= TARANIS_X7_VARIANT;
+  }
+  else if (IS_TARANIS_XLITES(board)) {
+    variant |= TARANIS_XLITES_VARIANT;
   }
   else if (IS_TARANIS_XLITE(board)) {
     variant |= TARANIS_XLITE_VARIANT;
   }
+  else if (IS_JUMPER_T12(board)) {
+    variant |= JUMPER_T12_VARIANT;
+  }
 
   OpenTxGeneralData generator((GeneralSettings &)radioData.generalSettings, board, version, variant);
-  // generator.Dump();
+  // generator.dump();
   QByteArray data;
   generator.Export(data);
   int sz = efile->writeRlc2(FILE_GENERAL, FILE_TYP_GENERAL, (const uint8_t *)data.constData(), data.size());
@@ -339,7 +366,7 @@ int OpenTxEepromInterface::save(uint8_t * eeprom, const RadioData & radioData, u
   for (int i = 0; i < getCurrentFirmware()->getCapability(Models); i++) {
     if (i < (int)radioData.models.size() && !radioData.models[i].isEmpty()) {
       OpenTxModelData generator((ModelData &)radioData.models[i], board, version, variant);
-      // generator.Dump();
+      // generator.dump();
       QByteArray data;
       generator.Export(data);
       int sz = efile->writeRlc2(FILE_MODEL(i), FILE_TYP_MODEL, (const uint8_t *)data.constData(), data.size());
@@ -364,7 +391,8 @@ int OpenTxEepromInterface::getSize(const ModelData &model)
   QByteArray tmp(Boards::getEEpromSize(Board::BOARD_UNKNOWN), 0);
   efile->EeFsCreate((uint8_t *) tmp.data(), Boards::getEEpromSize(Board::BOARD_UNKNOWN), board, 255/*version max*/);
 
-  OpenTxModelData open9xModel((ModelData &) model, board, 255/*version max*/, getCurrentFirmware()->getVariantNumber());
+  ModelData srcCopy(model); // work on a copy of model data, because Export() may modify it!
+  OpenTxModelData open9xModel(srcCopy, board, 255/*version max*/, getCurrentFirmware()->getVariantNumber());
 
   QByteArray eeprom;
   open9xModel.Export(eeprom);
@@ -383,8 +411,9 @@ int OpenTxEepromInterface::getSize(const GeneralSettings &settings)
   QByteArray tmp(Boards::getEEpromSize(Board::BOARD_UNKNOWN), 0);
   efile->EeFsCreate((uint8_t *) tmp.data(), Boards::getEEpromSize(Board::BOARD_UNKNOWN), board, 255);
 
-  OpenTxGeneralData open9xGeneral((GeneralSettings &) settings, board, 255, getCurrentFirmware()->getVariantNumber());
-  // open9xGeneral.Dump();
+  GeneralSettings srcCopy(settings); // work on a copy of settings data, because Export() may modify it!
+  OpenTxGeneralData open9xGeneral(srcCopy, board, 255, getCurrentFirmware()->getVariantNumber());
+  // open9xGeneral.dump();
 
   QByteArray eeprom;
   open9xGeneral.Export(eeprom);
@@ -414,11 +443,11 @@ int OpenTxFirmware::getCapability(::Capability capability)
 {
   switch (capability) {
     case Models:
-      if (IS_HORUS(board))
+      if (IS_FAMILY_HORUS_OR_T16(board))
         return 0;
       else if (IS_ARM(board))
         return 60;
-      else if (board == BOARD_M128)
+      else if (board == BOARD_9X_M128)
         return 30;
       else if (IS_2560(board))
         return 30;
@@ -430,7 +459,7 @@ int OpenTxFirmware::getCapability(::Capability capability)
       else
         return id.contains("imperial") ? 1 : 0;
     case ModelImage:
-      return (board == BOARD_TARANIS_X9D || IS_TARANIS_PLUS(board) || IS_HORUS(board));
+      return (board == BOARD_TARANIS_X9D || IS_TARANIS_PLUS(board) || board == BOARD_TARANIS_X9DP_2019 || IS_FAMILY_HORUS_OR_T16(board));
     case HasBeeper:
       return (!IS_ARM(board));
     case HasPxxCountry:
@@ -468,7 +497,7 @@ int OpenTxFirmware::getCapability(::Capability capability)
       else
         return 0;
     case ModelName:
-      return (IS_HORUS(board) ? 15 : (HAS_LARGE_LCD(board) ? 12 : 10));
+      return (IS_FAMILY_HORUS_OR_T16(board) ? 15 : (HAS_LARGE_LCD(board) ? 12 : 10));
     case FlightModesName:
       return (IS_HORUS_OR_TARANIS(board) ? 10 : 6);
     case GvarsName:
@@ -497,7 +526,7 @@ int OpenTxFirmware::getCapability(::Capability capability)
     case CustomFunctions:
       if (IS_ARM(board))
         return 64;
-      else if (IS_2560(board) || board == BOARD_M128)
+      else if (IS_2560(board) || board == BOARD_9X_M128)
         return 24;
       else
         return 16;
@@ -535,16 +564,16 @@ int OpenTxFirmware::getCapability(::Capability capability)
     case SoundPitch:
       return 1;
     case Haptic:
-      return (IS_2560(board) || IS_SKY9X(board) || IS_TARANIS_PLUS(board) || IS_TARANIS_SMALL(board) || IS_TARANIS_X9E(board) || IS_HORUS(board) || id.contains("haptic"));
+      return (IS_2560(board) || IS_SKY9X(board) || IS_TARANIS_PLUS(board) || IS_TARANIS_SMALL(board) || IS_TARANIS_X9E(board) || IS_FAMILY_HORUS_OR_T16(board) || IS_JUMPER_T12(board) || id.contains("haptic"));
     case ModelTrainerEnable:
-      if (IS_HORUS_OR_TARANIS(board))
+      if (IS_HORUS_OR_TARANIS(board) && board!=Board::BOARD_TARANIS_XLITE)
         return 1;
       else
         return 0;
     case MaxVolume:
       return (IS_ARM(board) ? 23 : 7);
     case MaxContrast:
-      if (IS_TARANIS_SMALL(board))
+      if (IS_TARANIS_SMALL(board) || IS_JUMPER_T12(board))
         return 30;
       else
         return 45;
@@ -583,7 +612,7 @@ int OpenTxFirmware::getCapability(::Capability capability)
     case TelemetryBars:
       return 1;
     case TelemetryCustomScreens:
-      if (IS_HORUS(board))
+      if (IS_FAMILY_HORUS_OR_T16(board))
         return 0;
       else
         return IS_ARM(board) ? 4 : 2;
@@ -611,6 +640,12 @@ int OpenTxFirmware::getCapability(::Capability capability)
       return (IS_ARM(board) ? 32 : 0);
     case NumModules:
       return (IS_ARM(board) ? 2 : 1);
+    case NumFirstUsableModule:
+      return (IS_JUMPER_T12(board) ? 1 : 0);
+    case HasModuleR9MFlex:
+      return id.contains("flexr9m");
+    case HasModuleR9MMini:
+      return IS_TARANIS_XLITE(board) && !id.contains("stdr9m");
     case HasPPMStart:
       return (IS_ARM(board) ? true : false);
     case HastxCurrentCalibration:
@@ -630,23 +665,23 @@ int OpenTxFirmware::getCapability(::Capability capability)
     case HasSDLogs:
       return ((IS_2560(board) || IS_ARM(board)) ? true : false);
     case LcdWidth:
-      if (IS_HORUS(board))
+      if (IS_FAMILY_HORUS_OR_T16(board))
         return 480;
-      else if (IS_TARANIS_SMALL(board))
+      else if (IS_TARANIS_SMALL(board) || IS_JUMPER_T12(board))
         return 128;
       else if (IS_TARANIS(board))
         return 212;
       else
         return 128;
     case LcdHeight:
-      if (IS_HORUS(board))
+      if (IS_FAMILY_HORUS_OR_T16(board))
         return 272;
       else
         return 64;
     case LcdDepth:
-      if (IS_HORUS(board))
+      if (IS_FAMILY_HORUS_OR_T16(board))
         return 16;
-      else if (IS_TARANIS_SMALL(board))
+      else if (IS_TARANIS_SMALL(board) || IS_JUMPER_T12(board))
         return 1;
       else if (IS_TARANIS(board))
         return 4;
@@ -682,16 +717,24 @@ int OpenTxFirmware::getCapability(::Capability capability)
     case HasMahPersistent:
       return (IS_ARM(board) ? true : false);
     case SimulatorVariant:
-      if (board == BOARD_STOCK)
+      if (board == BOARD_9X_M64)
         return SIMU_STOCK_VARIANTS;
-      else if (board == BOARD_M128)
+      else if (board == BOARD_9X_M128)
         return SIMU_M128_VARIANTS;
       else if (IS_TARANIS_X9E(board))
         return TARANIS_X9E_VARIANT;
+      else if (IS_TARANIS_X9LITES(board))
+        return TARANIS_X9LITES_VARIANT;
+      else if (IS_TARANIS_X9LITE(board))
+        return TARANIS_X9LITE_VARIANT;
       else if (IS_TARANIS_X7(board))
         return TARANIS_X7_VARIANT;
+      else if (IS_TARANIS_XLITES(board))
+        return TARANIS_XLITES_VARIANT;
       else if (IS_TARANIS_XLITE(board))
         return TARANIS_XLITE_VARIANT;
+      else if (IS_JUMPER_T12(board))
+        return JUMPER_T12_VARIANT;
       else
         return 0;
     case MavlinkTelemetry:
@@ -706,7 +749,11 @@ int OpenTxFirmware::getCapability(::Capability capability)
     case DangerousFunctions:
       return id.contains("danger") ? 1 : 0;
     case HasModelCategories:
-      return IS_HORUS(board);
+      return IS_FAMILY_HORUS_OR_T16(board);
+    case HasSwitchableJack:
+      return IS_TARANIS_XLITES(board);
+    case PwrButtonPress:
+      return IS_HORUS_OR_TARANIS(board) && (board!=Board::BOARD_TARANIS_X9D) && (board!=Board::BOARD_TARANIS_X9DP);
     default:
       return 0;
   }
@@ -727,55 +774,70 @@ QTime OpenTxFirmware::getMaxTimerStart()
     return QTime(0, 59, 59);
 }
 
-int OpenTxFirmware::isAvailable(PulsesProtocol proto, int port)
+bool OpenTxFirmware::isAvailable(PulsesProtocol proto, int port)
 {
   if (IS_HORUS_OR_TARANIS(board)) {
     switch (port) {
       case 0:
         switch (proto) {
           case PULSES_OFF:
+            return true;
           case PULSES_PXX_XJT_X16:
           case PULSES_PXX_XJT_LR12:
-            return 1;
+            return !IS_ACCESS_RADIO(board, id) && !IS_FAMILY_T16(board);
           case PULSES_PXX_XJT_D8:
-            return id.contains("eu") ? 0 : 1;
+            return !(IS_ACCESS_RADIO(board, id)  || id.contains("eu")) && !IS_FAMILY_T16(board);
           case PULSES_PPM:
-            return id.contains("internalppm") ? 1 : 0;
+            return id.contains("internalppm");
+          case PULSES_ACCESS_ISRM:
+          case PULSES_ACCST_ISRM_D16:
+            return IS_ACCESS_RADIO(board, id);
+          case PULSES_MULTIMODULE:
+            return id.contains("internalmulti");
           default:
-            return 0;
+            return false;
         }
-        break;
+
       case 1:
         switch (proto) {
           case PULSES_OFF:
           case PULSES_PPM:
+            return true;
           case PULSES_PXX_XJT_X16:
           case PULSES_PXX_XJT_D8:
           case PULSES_PXX_XJT_LR12:
+            return !(IS_TARANIS_XLITES(board) || IS_TARANIS_X9LITE(board));
           case PULSES_PXX_R9M:
-            //case PULSES_PXX_DJT:     // Unavailable for now
           case PULSES_LP45:
           case PULSES_DSM2:
           case PULSES_DSMX:
-          case PULSES_CROSSFIRE:
           case PULSES_SBUS:
-            return 1;
           case PULSES_MULTIMODULE:
-            return id.contains("multimodule") ? 1 : 0;
+          case PULSES_CROSSFIRE:
+            return true;
+          case PULSES_ACCESS_R9M:
+            return IS_TARANIS_XLITE(board) || IS_TARANIS_X9LITE(board) || board == BOARD_TARANIS_X9DP_2019 || board == BOARD_X10_EXPRESS || (IS_FAMILY_HORUS_OR_T16(board) && id.contains("internalaccess"));
+          case PULSES_PXX_R9M_LITE:
+          case PULSES_ACCESS_R9M_LITE:
+          case PULSES_ACCESS_R9M_LITE_PRO:
+          case PULSES_XJT_LITE_X16:
+          case PULSES_XJT_LITE_D8:
+          case PULSES_XJT_LITE_LR12:
+            return (IS_TARANIS_XLITE(board) || IS_TARANIS_X9LITE(board));
           default:
-            return 0;
+            return false;
         }
-        break;
+
       case -1:
         switch (proto) {
           case PULSES_PPM:
-            return 1;
+            return true;
           default:
-            return 0;
+            return false;
         }
-        break;
+
       default:
-        return 0;
+        return false;
     }
   }
   else if (IS_SKY9X(board)) {
@@ -791,23 +853,22 @@ int OpenTxFirmware::isAvailable(PulsesProtocol proto, int port)
           case PULSES_DSM2:
           case PULSES_DSMX:
           case PULSES_SBUS:
-            return 1;
           case PULSES_MULTIMODULE:
-            return id.contains("multimodule") ? 1 : 0;
+            return true;
           default:
-            return 0;
+            return false;
         }
         break;
       case 1:
         switch (proto) {
           case PULSES_PPM:
-            return 1;
+            return true;
           default:
-            return 0;
+            return false;
         }
         break;
       default:
-        return 0;
+        return false;
     }
   }
   else {
@@ -819,9 +880,9 @@ int OpenTxFirmware::isAvailable(PulsesProtocol proto, int port)
         // case PULSES_PXX_DJT:     // Unavailable for now
       case PULSES_PPM16:
       case PULSES_PPMSIM:
-        return 1;
+        return true;
       default:
-        return 0;
+        return false;
     }
   }
 }
@@ -885,7 +946,14 @@ EepromLoadErrors OpenTxEepromInterface::checkVersion(unsigned int version)
         return OLD_VERSION;
       }
     case 218:
+      // ACCESS
+      // switches add for X7/X10/X12S
+      // 60 sensors for X12
+      return OLD_VERSION;
+
+    case 219:
       break;
+
     default:
       return NOT_OPENTX;
   }
@@ -896,7 +964,7 @@ EepromLoadErrors OpenTxEepromInterface::checkVersion(unsigned int version)
 bool OpenTxEepromInterface::checkVariant(unsigned int version, unsigned int variant)
 {
   bool variantError = false;
-  if (board == BOARD_M128 && !(variant & M128_VARIANT)) {
+  if (board == BOARD_9X_M128 && !(variant & M128_VARIANT)) {
     if (version == 212) {
       uint8_t tmp[1000];
       for (int i = 1; i < 31; i++) {
@@ -920,8 +988,28 @@ bool OpenTxEepromInterface::checkVariant(unsigned int version, unsigned int vari
       variantError = true;
     }
   }
+  else if (IS_TARANIS_XLITES(board)) {
+    if (variant != TARANIS_XLITES_VARIANT) {
+      variantError = true;
+    }
+  }
   else if (IS_TARANIS_XLITE(board)) {
     if (variant != TARANIS_XLITE_VARIANT) {
+      variantError = true;
+    }
+  }
+  else if (IS_TARANIS_X9LITES(board)) {
+    if (variant != TARANIS_X9LITES_VARIANT) {
+      variantError = true;
+    }
+  }
+  else if (IS_TARANIS_X9LITE(board)) {
+    if (variant != TARANIS_X9LITE_VARIANT) {
+      variantError = true;
+    }
+  }
+  else if (IS_JUMPER_T12(board)) {
+    if (variant != JUMPER_T12_VARIANT) {
       variantError = true;
     }
   }
@@ -1059,379 +1147,234 @@ QString OpenTxFirmware::getStampUrl()
   return getFirmwareBaseUrl() % QStringLiteral("stamp-opentx.txt");
 }
 
-void addOpenTxCommonOptions(OpenTxFirmware * firmware)
-{
-  firmware->addOption("ppmus", QCoreApplication::translate("Firmware", "Channel values displayed in us"));
-  firmware->addOption("nooverridech", QCoreApplication::translate("Firmware", "No OverrideCH functions available"));
-  Option fai_options[] = {{"faichoice", QCoreApplication::translate("Firmware", "Possibility to enable FAI MODE (no telemetry) at field")},
-                          {"faimode",   QCoreApplication::translate("Firmware", "FAI MODE (no telemetry) always enabled")},
-                          {NULL}};
-  firmware->addOptions(fai_options);
-}
 
-void addOpenTxArmOptions(OpenTxFirmware * firmware)
-{
-  firmware->addOption("multimodule", QCoreApplication::translate("Firmware", "Support for the DIY-Multiprotocol-TX-Module"));
-  firmware->addOption("eu", QCoreApplication::translate("Firmware", "Removes D8 FrSky protocol support which is not legal for use in the EU on radios sold after Jan 1st, 2015"));
-}
+// Firmware registrations
+// NOTE: "recognized" build options are defined in /radio/util/fwoptions.py
 
-void addOpenTxFrskyOptions(OpenTxFirmware * firmware)
-{
-  addOpenTxCommonOptions(firmware);
-  addOpenTxArmOptions(firmware);
-  firmware->addOption("noheli", QCoreApplication::translate("Firmware", "Disable HELI menu and cyclic mix support"));
-  firmware->addOption("nogvars", QCoreApplication::translate("Firmware", "Disable Global variables"));
-  firmware->addOption("lua", QCoreApplication::translate("Firmware", "Enable Lua custom scripts screen"));
-  firmware->addOption("luac", QCoreApplication::translate("Firmware", "Enable Lua compiler"));
-}
-
-void addOpenTxTaranisOptions(OpenTxFirmware * firmware)
-{
-  addOpenTxFrskyOptions(firmware);
-  firmware->addOption("sqt5font", QCoreApplication::translate("Firmware", "Use alternative SQT5 font"));
-}
-
-void addOpenTxLcdOptions(OpenTxFirmware * firmware)
-{
-  Option lcd_options[] = {
-    {"ST7565P",     QCoreApplication::translate("Firmware", "ST7565P LCD or compatible")},
-    {"ST7565R",     QCoreApplication::translate("Firmware", "ST7565R LCD or compatible")},
-    {"ERC12864FSF", QCoreApplication::translate("Firmware", "ERC12864FSF LCD")},
-    {"ST7920",      QCoreApplication::translate("Firmware", "ST7920 LCD")},
-    {"KS108",       QCoreApplication::translate("Firmware", "KS108 LCD")},
-    {NULL}
-  };
-  firmware->addOptions(lcd_options);
-}
-
-void addOpenTxVoiceOptions(OpenTxFirmware * firmware)
-{
-  Option voice_options[] = {
-    {"WTV20",     	QCoreApplication::translate("Firmware", "WTV20 voice module")},
-    {"JQ6500", 		QCoreApplication::translate("Firmware", "JQ6500 voice module")},
-    {NULL}
-  };
-  firmware->addOptions(voice_options);
-}
-
-QList<OpenTxEepromInterface *> opentxEEpromInterfaces;
-
-void registerOpenTxFirmware(OpenTxFirmware * firmware)
+void registerOpenTxFirmware(OpenTxFirmware * firmware, bool deprecated = false)
 {
   OpenTxEepromInterface * eepromInterface = new OpenTxEepromInterface(firmware);
   firmware->setEEpromInterface(eepromInterface);
   opentxEEpromInterfaces.push_back(eepromInterface);
   eepromInterfaces.push_back(eepromInterface);
-  Firmware::addRegisteredFirmware(firmware);
+  if (!deprecated)
+    Firmware::addRegisteredFirmware(firmware);
+}
+
+void addOpenTxCommonOptions(OpenTxFirmware * firmware)
+{
+  static const Firmware::OptionsGroup fai_options = {
+    Firmware::Option("faichoice", Firmware::tr("Possibility to enable FAI MODE (no telemetry) at field")),
+    Firmware::Option("faimode",   Firmware::tr("FAI MODE (no telemetry) always enabled"))
+  };
+  firmware->addOption("ppmus", Firmware::tr("Channel values displayed in us"));
+  firmware->addOptionsGroup(fai_options);
+  firmware->addOption("nooverridech", Firmware::tr("No OverrideCH functions available"));
+}
+
+enum RfOptions {
+  NONE = 0,
+  EU = 1 << 0,
+  FLEX = 1 << 1
+};
+
+void addOpenTxRfOptions(OpenTxFirmware * firmware, uint8_t options)
+{
+  static const Firmware::Option opt_eu("eu", Firmware::tr("Removes D8 FrSky protocol support which is not legal for use in the EU on radios sold after Jan 1st, 2015"));
+  static const Firmware::Option opt_fl("flexr9m", Firmware::tr("Enable non certified firmwares"));
+  if (options == EU + FLEX)
+    firmware->addOptionsGroup({opt_eu, opt_fl});
+  else if (options == EU)
+    firmware->addOption(opt_eu);
+  else if (options == FLEX)
+    firmware->addOption(opt_fl);
+}
+
+void addOpenTxFontOptions(OpenTxFirmware * firmware)
+{
+  firmware->addOption("sqt5font", Firmware::tr("Use alternative SQT5 font"));
+}
+
+void addOpenTxFrskyOptions(OpenTxFirmware * firmware)
+{
+  addOpenTxCommonOptions(firmware);
+  firmware->addOption("noheli", Firmware::tr("Disable HELI menu and cyclic mix support"));
+  firmware->addOption("nogvars", Firmware::tr("Disable Global variables"));
+  firmware->addOption("lua", Firmware::tr("Enable Lua custom scripts screen"));
+}
+
+void addOpenTxTaranisOptions(OpenTxFirmware * firmware)
+{
+  addOpenTxFrskyOptions(firmware);
+  addOpenTxFontOptions(firmware);
+}
+
+void addPPMInternalModuleHack(OpenTxFirmware * firmware)
+{
+  firmware->addOption("internalppm", Firmware::tr("Support for PPM internal module hack"));
+}
+
+void addOpenTxArm9xOptions(OpenTxFirmware * firmware, bool dblkeys = true)
+{
+  addOpenTxCommonOptions(firmware);
+  firmware->addOption("heli", Firmware::tr("Enable HELI menu and cyclic mix support"));
+  firmware->addOption("gvars", Firmware::tr("Global variables"), GVARS_VARIANT);
+  firmware->addOption("potscroll", Firmware::tr("Pots use in menus navigation"));
+  firmware->addOption("autosource", Firmware::tr("In model setup menus automatically set source by moving the control"));
+  firmware->addOption("autoswitch", Firmware::tr("In model setup menus automatically set switch by moving the control"));
+  firmware->addOption("nographics", Firmware::tr("No graphical check boxes and sliders"));
+  firmware->addOption("battgraph", Firmware::tr("Battery graph"));
+  firmware->addOption("nobold", Firmware::tr("Don't use bold font for highlighting active items"));
+  //firmware->addOption("bluetooth", Firmware::tr("Bluetooth interface"));
+  if (dblkeys)
+    firmware->addOption("dblkeys", Firmware::tr("Enable resetting values by pressing up and down at the same time"));
+  addOpenTxFontOptions(firmware);
+  addOpenTxRfOptions(firmware, FLEX);
 }
 
 void registerOpenTxFirmwares()
 {
   OpenTxFirmware * firmware;
 
-  Option ext_options[] = {{"frsky",      QCoreApplication::translate("Firmware", "Support for frsky telemetry mod"),  FRSKY_VARIANT},
-                          {"telemetrez", QCoreApplication::translate("Firmware", "Support for telemetry easy board"), FRSKY_VARIANT},
-                          {"jeti",       QCoreApplication::translate("Firmware", "Support for jeti telemetry mod"),       0},
-                          {"ardupilot",  QCoreApplication::translate("Firmware", "Support for receiving ardupilot data"), 0},
-                          {"nmea",       QCoreApplication::translate("Firmware", "Support for receiving NMEA data"),      0},
-                          {"mavlink",    QCoreApplication::translate("Firmware", "Support for MAVLINK devices"),      MAVLINK_VARIANT},
-                          {NULL}};
-  Option extr_options[] = {{"frsky",     QCoreApplication::translate("Firmware", "Support for frsky telemetry mod"), FRSKY_VARIANT},
-                           {"jeti",      QCoreApplication::translate("Firmware", "Support for jeti telemetry mod"),       0},
-                           {"ardupilot", QCoreApplication::translate("Firmware", "Support for receiving ardupilot data"), 0},
-                           {"nmea",      QCoreApplication::translate("Firmware", "Support for receiving NMEA data"),      0},
-                           {"mavlink",   QCoreApplication::translate("Firmware", "Support for MAVLINK devices"),     MAVLINK_VARIANT},
-                           {NULL}};
-  Option nav_options[] = {{"rotenc",    QCoreApplication::translate("Firmware", "Rotary Encoder use in menus navigation")},
-                          {"potscroll", QCoreApplication::translate("Firmware", "Pots use in menus navigation")},
-                          {NULL}};
-  Option dsm2_options[] = {{"DSM2",    QCoreApplication::translate("Firmware", "Support for DSM2 modules"),                                  0},
-                           {"DSM2PPM", QCoreApplication::translate("Firmware", "Support for DSM2 modules using ppm instead of true serial"), 0},
-                           {NULL}};
-
   /* FrSky Taranis X9D+ board */
-  firmware = new OpenTxFirmware("opentx-x9d+", QCoreApplication::translate("Firmware", "FrSky Taranis X9D+"), BOARD_TARANIS_X9DP);
-  firmware->addOption("internalppm", QCoreApplication::translate("Firmware", "Support for PPM internal module hack"));
-  firmware->addOption("noras", QCoreApplication::translate("Firmware", "Disable RAS (SWR)"));
+  firmware = new OpenTxFirmware("opentx-x9d+", Firmware::tr("FrSky Taranis X9D+"), BOARD_TARANIS_X9DP);
+  firmware->addOption("noras", Firmware::tr("Disable RAS (SWR)"));
+  addOpenTxTaranisOptions(firmware);
+  addPPMInternalModuleHack(firmware);
+  registerOpenTxFirmware(firmware);
+  addOpenTxRfOptions(firmware, EU + FLEX);
+
+  /* FrSky Taranis X9D+ 2019 board */
+  firmware = new OpenTxFirmware("opentx-x9d+2019", Firmware::tr("FrSky Taranis X9D+ 2019"), BOARD_TARANIS_X9DP_2019);
   addOpenTxTaranisOptions(firmware);
   registerOpenTxFirmware(firmware);
+  addOpenTxRfOptions(firmware, FLEX);
 
   /* FrSky Taranis X9D board */
-  firmware = new OpenTxFirmware("opentx-x9d", QCoreApplication::translate("Firmware", "FrSky Taranis X9D"), BOARD_TARANIS_X9D);
-  firmware->addOption("haptic", QCoreApplication::translate("Firmware", "Haptic module installed"));
-  firmware->addOption("internalppm", QCoreApplication::translate("Firmware", "Support for PPM internal module hack"));
+  firmware = new OpenTxFirmware("opentx-x9d", Firmware::tr("FrSky Taranis X9D"), BOARD_TARANIS_X9D);
+  firmware->addOption("haptic", Firmware::tr("Haptic module installed"));
   addOpenTxTaranisOptions(firmware);
+  addPPMInternalModuleHack(firmware);
   registerOpenTxFirmware(firmware);
+  addOpenTxRfOptions(firmware, EU + FLEX);
 
   /* FrSky Taranis X9E board */
-  firmware = new OpenTxFirmware("opentx-x9e", QCoreApplication::translate("Firmware", "FrSky Taranis X9E"), BOARD_TARANIS_X9E);
-  firmware->addOption("shutdownconfirm", QCoreApplication::translate("Firmware", "Confirmation before radio shutdown"));
-  firmware->addOption("horussticks", QCoreApplication::translate("Firmware", "Horus gimbals installed (Hall sensors)"));
-  firmware->addOption("internalppm", QCoreApplication::translate("Firmware", "Support for PPM internal module hack"));
+  firmware = new OpenTxFirmware("opentx-x9e", Firmware::tr("FrSky Taranis X9E"), BOARD_TARANIS_X9E);
+  firmware->addOption("shutdownconfirm", Firmware::tr("Confirmation before radio shutdown"));
+  firmware->addOption("horussticks", Firmware::tr("Horus gimbals installed (Hall sensors)"));
+  addOpenTxTaranisOptions(firmware);
+  addPPMInternalModuleHack(firmware);
+  registerOpenTxFirmware(firmware);
+  addOpenTxRfOptions(firmware, EU + FLEX);
+
+  /* FrSky X9-Lite board */
+  firmware = new OpenTxFirmware("opentx-x9lite", Firmware::tr("FrSky Taranis X9-Lite"), BOARD_TARANIS_X9LITE);
   addOpenTxTaranisOptions(firmware);
   registerOpenTxFirmware(firmware);
+  addOpenTxRfOptions(firmware, FLEX);
+
+  /* FrSky X9-LiteS board */
+  firmware = new OpenTxFirmware("opentx-x9lites", Firmware::tr("FrSky Taranis X9-Lite S"), BOARD_TARANIS_X9LITES);
+  addOpenTxTaranisOptions(firmware);
+  registerOpenTxFirmware(firmware);
+  addOpenTxRfOptions(firmware, FLEX);
 
   /* FrSky X7 board */
-  firmware = new OpenTxFirmware("opentx-x7", QCoreApplication::translate("Firmware", "FrSky Taranis X7 / X7S"), BOARD_TARANIS_X7);
+  firmware = new OpenTxFirmware("opentx-x7", Firmware::tr("FrSky Taranis X7 / X7S"), BOARD_TARANIS_X7);
   addOpenTxTaranisOptions(firmware);
   registerOpenTxFirmware(firmware);
+  addOpenTxRfOptions(firmware, EU + FLEX);
+
+  /* FrSky X7 Access board */
+  firmware = new OpenTxFirmware("opentx-x7access", Firmware::tr("FrSky Taranis X7 / X7S Access"), BOARD_TARANIS_X7_ACCESS);
+  addOpenTxTaranisOptions(firmware);
+  registerOpenTxFirmware(firmware);
+  addOpenTxRfOptions(firmware, FLEX);
+
+  /* FrSky X-Lite S/PRO board */
+  firmware = new OpenTxFirmware("opentx-xlites", Firmware::tr("FrSky Taranis X-Lite S/PRO"), BOARD_TARANIS_XLITES);
+  addOpenTxTaranisOptions(firmware);
+  registerOpenTxFirmware(firmware);
+  addOpenTxRfOptions(firmware, FLEX);
 
   /* FrSky X-Lite board */
-  firmware = new OpenTxFirmware("opentx-xlite", QCoreApplication::translate("Firmware", "FrSky Taranis X-Lite"), BOARD_TARANIS_XLITE);
-  // firmware->addOption("stdr9m", QCoreApplication::translate("Firmware", "Use JR-sized R9M module"));
+  firmware = new OpenTxFirmware("opentx-xlite", Firmware::tr("FrSky Taranis X-Lite"), BOARD_TARANIS_XLITE);
+  // firmware->addOption("stdr9m", Firmware::tr("Use JR-sized R9M module"));
   addOpenTxTaranisOptions(firmware);
   registerOpenTxFirmware(firmware);
+  addOpenTxRfOptions(firmware, EU + FLEX);
 
   /* FrSky X10 board */
-  firmware = new OpenTxFirmware("opentx-x10", QCoreApplication::translate("Firmware", "FrSky Horus X10 / X10S"), BOARD_X10);
+  firmware = new OpenTxFirmware("opentx-x10", Firmware::tr("FrSky Horus X10 / X10S"), BOARD_X10);
+  addOpenTxFrskyOptions(firmware);
+  firmware->addOption("internalaccess", Firmware::tr("Support for ACCESS internal module replacement"));
+  registerOpenTxFirmware(firmware);
+  addOpenTxRfOptions(firmware, EU + FLEX);
+
+  /* FrSky X10 Express board */
+  firmware = new OpenTxFirmware("opentx-x10express", Firmware::tr("FrSky Horus X10 Express / X10S Express"), BOARD_X10_EXPRESS);
   addOpenTxFrskyOptions(firmware);
   registerOpenTxFirmware(firmware);
+  addOpenTxRfOptions(firmware, FLEX);
 
-  /* FrSky Horus board */
-  firmware = new OpenTxFirmware("opentx-x12s", QCoreApplication::translate("Firmware", "FrSky Horus X12S"), BOARD_X12S);
+  /* FrSky X12 (Horus) board */
+  firmware = new OpenTxFirmware("opentx-x12s", Firmware::tr("FrSky Horus X12S"), BOARD_HORUS_X12S);
   addOpenTxFrskyOptions(firmware);
-  firmware->addOption("pcbdev", QCoreApplication::translate("Firmware", "Use ONLY with first DEV pcb version"));
+  firmware->addOption("internalaccess", Firmware::tr("Support for ACCESS internal module replacement"));
+  firmware->addOption("pcbdev", Firmware::tr("Use ONLY with first DEV pcb version"));
+  registerOpenTxFirmware(firmware);
+  addOpenTxRfOptions(firmware, EU + FLEX);
+
+  /* Jumper T12 board */
+  firmware = new OpenTxFirmware("opentx-t12", QCoreApplication::translate("Firmware", "Jumper T12 / T12 Pro"), BOARD_JUMPER_T12);
+  addOpenTxCommonOptions(firmware);
+  firmware->addOption("noheli", Firmware::tr("Disable HELI menu and cyclic mix support"));
+  firmware->addOption("nogvars", Firmware::tr("Disable Global variables"));
+  firmware->addOption("lua", Firmware::tr("Enable Lua custom scripts screen"));
+  firmware->addOption("flexr9m", Firmware::tr("Enable non certified R9M firmwares"));
+  firmware->addOption("internalmulti", Firmware::tr("Support for MULTI internal module"));
+  addOpenTxFontOptions(firmware);
+  registerOpenTxFirmware(firmware);
+  addOpenTxRfOptions(firmware, FLEX);
+
+  /* Jumper T16 board */
+  firmware = new OpenTxFirmware("opentx-t16", Firmware::tr("Jumper T16 / T16+ / T16 Pro"), BOARD_JUMPER_T16);
+  addOpenTxFrskyOptions(firmware);
+  firmware->addOption("internalmulti", Firmware::tr("Support for MULTI internal module"));
+  firmware->addOption("bluetooth", Firmware::tr("Support for bluetooth module"));
+  registerOpenTxFirmware(firmware);
+  addOpenTxRfOptions(firmware, FLEX);
+
+  /* Radiomaster TX16S board */
+  firmware = new OpenTxFirmware("opentx-tx16s", Firmware::tr("Radiomaster TX16S"), BOARD_RADIOMASTER_TX16S);
+  addOpenTxFrskyOptions(firmware);
+  firmware->addOption("bluetooth", Firmware::tr("Support for bluetooth module"));
   registerOpenTxFirmware(firmware);
 
   /* 9XR-Pro */
-  firmware = new OpenTxFirmware("opentx-9xrpro", QCoreApplication::translate("Firmware", "Turnigy 9XR-PRO"), BOARD_9XRPRO);
-  firmware->addOption("heli", QCoreApplication::translate("Firmware", "Enable HELI menu and cyclic mix support"));
-  firmware->addOption("gvars", QCoreApplication::translate("Firmware", "Global variables"), GVARS_VARIANT);
-  firmware->addOption("potscroll", QCoreApplication::translate("Firmware", "Pots use in menus navigation"));
-  firmware->addOption("autosource", QCoreApplication::translate("Firmware", "In model setup menus automatically set source by moving the control"));
-  firmware->addOption("autoswitch", QCoreApplication::translate("Firmware", "In model setup menus automatically set switch by moving the control"));
-  firmware->addOption("nographics", QCoreApplication::translate("Firmware", "No graphical check boxes and sliders"));
-  firmware->addOption("battgraph", QCoreApplication::translate("Firmware", "Battery graph"));
-  firmware->addOption("nobold", QCoreApplication::translate("Firmware", "Don't use bold font for highlighting active items"));
-//  firmware->addOption("bluetooth", QCoreApplication::translate("Firmware", "Bluetooth interface"));
-  firmware->addOption("sqt5font", QCoreApplication::translate("Firmware", "Use alternative SQT5 font"));
-  addOpenTxArmOptions(firmware);
-  addOpenTxCommonOptions(firmware);
-  registerOpenTxFirmware(firmware);
-
-  /* 9XR board with M128 chip */
-  firmware = new OpenTxFirmware("opentx-9xr128", QCoreApplication::translate("Firmware", "Turnigy 9XR with m128 chip"), BOARD_M128);
-  firmware->addOptions(extr_options);
-  firmware->addOption("heli", QCoreApplication::translate("Firmware", "Enable heli menu and cyclic mix support"));
-  firmware->addOption("templates", QCoreApplication::translate("Firmware", "Enable TEMPLATES menu"));
-  firmware->addOption("nosplash", QCoreApplication::translate("Firmware", "No splash screen"));
-  firmware->addOption("nofp", QCoreApplication::translate("Firmware", "No flight modes"));
-  firmware->addOption("nocurves", QCoreApplication::translate("Firmware", "Disable curves menus"));
-  firmware->addOption("audio", QCoreApplication::translate("Firmware", "Support for radio modified with regular speaker"));
-  firmware->addOption("voice", QCoreApplication::translate("Firmware", "Used if you have modified your radio with voice mode"));
-  firmware->addOption("haptic", QCoreApplication::translate("Firmware", "Used if you have modified your radio with haptic mode"));
-  // NOT TESTED firmware->addOption("PXX", QCoreApplication::translate("Firmware", "Support of FrSky PXX protocol"));
-  firmware->addOption("DSM2", QCoreApplication::translate("Firmware", "Support for DSM2 modules"));
-  firmware->addOption("ppmca", QCoreApplication::translate("Firmware", "PPM center adjustment in limits"));
-  firmware->addOption("gvars", QCoreApplication::translate("Firmware", "Global variables"), GVARS_VARIANT);
-  firmware->addOption("symlimits", QCoreApplication::translate("Firmware", "Symetrical Limits"));
-  firmware->addOption("potscroll", QCoreApplication::translate("Firmware", "Pots use in menus navigation"));
-  firmware->addOption("autosource", QCoreApplication::translate("Firmware", "In model setup menus automatically set source by moving the control"));
-  firmware->addOption("autoswitch", QCoreApplication::translate("Firmware", "In model setup menus automatically set switch by moving the control"));
-  firmware->addOption("nographics", QCoreApplication::translate("Firmware", "No graphical check boxes and sliders"));
-  firmware->addOption("battgraph", QCoreApplication::translate("Firmware", "Battery graph"));
-  firmware->addOption("nobold", QCoreApplication::translate("Firmware", "Don't use bold font for highlighting active items"));
-  firmware->addOption("thrtrace", QCoreApplication::translate("Firmware", "Enable the throttle trace in Statistics"));
-  firmware->addOption("pgbar", QCoreApplication::translate("Firmware", "EEprom write Progress bar"));
-  firmware->addOption("imperial", QCoreApplication::translate("Firmware", "Imperial units"));
-  firmware->addOption("sqt5font", QCoreApplication::translate("Firmware", "Use alternative SQT5 font"));
-  addOpenTxCommonOptions(firmware);
-  registerOpenTxFirmware(firmware);
-
-  /* 9XR board */
-  firmware = new OpenTxFirmware("opentx-9xr", QCoreApplication::translate("Firmware", "Turnigy 9XR"), BOARD_STOCK);
-  firmware->addOptions(extr_options);
-  firmware->addOption("heli", QCoreApplication::translate("Firmware", "Enable heli menu and cyclic mix support"));
-  firmware->addOption("templates", QCoreApplication::translate("Firmware", "Enable TEMPLATES menu"));
-  firmware->addOption("nosplash", QCoreApplication::translate("Firmware", "No splash screen"));
-  firmware->addOption("nofp", QCoreApplication::translate("Firmware", "No flight modes"));
-  firmware->addOption("nocurves", QCoreApplication::translate("Firmware", "Disable curves menus"));
-  firmware->addOption("audio", QCoreApplication::translate("Firmware", "Support for radio modified with regular speaker"));
-  firmware->addOption("voice", QCoreApplication::translate("Firmware", "Used if you have modified your radio with voice mode"));
-  firmware->addOption("haptic", QCoreApplication::translate("Firmware", "Used if you have modified your radio with haptic mode"));
-  // NOT TESTED firmware->addOption("PXX", QCoreApplication::translate("Firmware", "Support of FrSky PXX protocol"));
-  firmware->addOption("DSM2", QCoreApplication::translate("Firmware", "Support for DSM2 modules"));
-  firmware->addOption("ppmca", QCoreApplication::translate("Firmware", "PPM center adjustment in limits"));
-  firmware->addOption("gvars", QCoreApplication::translate("Firmware", "Global variables"), GVARS_VARIANT);
-  firmware->addOption("symlimits", QCoreApplication::translate("Firmware", "Symetrical Limits"));
-  firmware->addOption("potscroll", QCoreApplication::translate("Firmware", "Pots use in menus navigation"));
-  firmware->addOption("autosource", QCoreApplication::translate("Firmware", "In model setup menus automatically set source by moving the control"));
-  firmware->addOption("autoswitch", QCoreApplication::translate("Firmware", "In model setup menus automatically set switch by moving the control"));
-  firmware->addOption("nographics", QCoreApplication::translate("Firmware", "No graphical check boxes and sliders"));
-  firmware->addOption("battgraph", QCoreApplication::translate("Firmware", "Battery graph"));
-  firmware->addOption("nobold", QCoreApplication::translate("Firmware", "Don't use bold font for highlighting active items"));
-  firmware->addOption("thrtrace", QCoreApplication::translate("Firmware", "Enable the throttle trace in Statistics"));
-  firmware->addOption("pgbar", QCoreApplication::translate("Firmware", "EEprom write Progress bar"));
-  firmware->addOption("imperial", QCoreApplication::translate("Firmware", "Imperial units"));
-  firmware->addOption("nowshh", QCoreApplication::translate("Firmware", "No Winged Shadow How High support"));
-  firmware->addOption("novario", QCoreApplication::translate("Firmware", "No vario support"));
-  firmware->addOption("nogps", QCoreApplication::translate("Firmware", "No GPS support"));
-  firmware->addOption("nogauges", QCoreApplication::translate("Firmware", "No gauges in the custom telemetry screen"));
-  firmware->addOption("stickrev", QCoreApplication::translate("Firmware", "Add support for reversing stick inputs (e.g. needed for FrSky gimbals)"));
-  firmware->addOption("sqt5font", QCoreApplication::translate("Firmware", "Use alternative SQT5 font"));
-  addOpenTxCommonOptions(firmware);
-  registerOpenTxFirmware(firmware);
-
-  /* 9x board */
-  firmware = new OpenTxFirmware("opentx-9x", QCoreApplication::translate("Firmware", "9X with stock board"), BOARD_STOCK);
-  firmware->addOptions(ext_options);
-  firmware->addOption("heli", QCoreApplication::translate("Firmware", "Enable heli menu and cyclic mix support"));
-  firmware->addOption("templates", QCoreApplication::translate("Firmware", "Enable TEMPLATES menu"));
-  firmware->addOption("nosplash", QCoreApplication::translate("Firmware", "No splash screen"));
-  firmware->addOption("nofp", QCoreApplication::translate("Firmware", "No flight modes"));
-  firmware->addOption("nocurves", QCoreApplication::translate("Firmware", "Disable curves menus"));
-  firmware->addOption("audio", QCoreApplication::translate("Firmware", "Support for radio modified with regular speaker"));
-  firmware->addOption("voice", QCoreApplication::translate("Firmware", "Used if you have modified your radio with voice mode"));
-  firmware->addOption("haptic", QCoreApplication::translate("Firmware", "Used if you have modified your radio with haptic mode"));
-  // NOT TESTED firmware->addOption("PXX", QCoreApplication::translate("Firmware", "Support of FrSky PXX protocol"));
-  firmware->addOption("DSM2", QCoreApplication::translate("Firmware", "Support for DSM2 modules"));
-  firmware->addOption("ppmca", QCoreApplication::translate("Firmware", "PPM center adjustment in limits"));
-  firmware->addOption("gvars", QCoreApplication::translate("Firmware", "Global variables"), GVARS_VARIANT);
-  firmware->addOption("symlimits", QCoreApplication::translate("Firmware", "Symetrical Limits"));
-  firmware->addOptions(nav_options);
-  firmware->addOption("sp22", QCoreApplication::translate("Firmware", "SmartieParts 2.2 Backlight support"));
-  firmware->addOption("autosource", QCoreApplication::translate("Firmware", "In model setup menus automatically set source by moving the control"));
-  firmware->addOption("autoswitch", QCoreApplication::translate("Firmware", "In model setup menus automatically set switch by moving the control"));
-  firmware->addOption("dblkeys", QCoreApplication::translate("Firmware", "Enable resetting values by pressing up and down at the same time"));
-  firmware->addOption("nographics", QCoreApplication::translate("Firmware", "No graphical check boxes and sliders"));
-  firmware->addOption("battgraph", QCoreApplication::translate("Firmware", "Battery graph"));
-  firmware->addOption("nobold", QCoreApplication::translate("Firmware", "Don't use bold font for highlighting active items"));
-  firmware->addOption("thrtrace", QCoreApplication::translate("Firmware", "Enable the throttle trace in Statistics"));
-  firmware->addOption("pgbar", QCoreApplication::translate("Firmware", "EEprom write progress bar"));
-  firmware->addOption("imperial", QCoreApplication::translate("Firmware", "Imperial units"));
-  firmware->addOption("nowshh", QCoreApplication::translate("Firmware", "No Winged Shadow How High support"));
-  firmware->addOption("novario", QCoreApplication::translate("Firmware", "No vario support"));
-  firmware->addOption("nogps", QCoreApplication::translate("Firmware", "No GPS support"));
-  firmware->addOption("nogauges", QCoreApplication::translate("Firmware", "No gauges in the custom telemetry screen"));
-  firmware->addOption("fasoffset", QCoreApplication::translate("Firmware", "Allow compensating for offset errors in FrSky FAS current sensors"));
-  firmware->addOption("stickrev", QCoreApplication::translate("Firmware", "Add support for reversing stick inputs (e.g. needed for FrSky gimbals)"));
-  firmware->addOption("sqt5font", QCoreApplication::translate("Firmware", "Use alternative SQT5 font"));
-  addOpenTxCommonOptions(firmware);
-  registerOpenTxFirmware(firmware);
-
-  /* 9x board with M128 chip */
-  firmware = new OpenTxFirmware("opentx-9x128", QCoreApplication::translate("Firmware", "9X with stock board and m128 chip"), BOARD_M128);
-  firmware->addOptions(ext_options);
-  firmware->addOption("heli", QCoreApplication::translate("Firmware", "Enable heli menu and cyclic mix support"));
-  firmware->addOption("templates", QCoreApplication::translate("Firmware", "Enable TEMPLATES menu"));
-  firmware->addOption("nosplash", QCoreApplication::translate("Firmware", "No splash screen"));
-  firmware->addOption("nofp", QCoreApplication::translate("Firmware", "No flight modes"));
-  firmware->addOption("nocurves", QCoreApplication::translate("Firmware", "Disable curves menus"));
-  firmware->addOption("audio", QCoreApplication::translate("Firmware", "Support for radio modified with regular speaker"));
-  firmware->addOption("voice", QCoreApplication::translate("Firmware", "Used if you have modified your radio with voice mode"));
-  firmware->addOption("haptic", QCoreApplication::translate("Firmware", "Used if you have modified your radio with haptic mode"));
-  // NOT TESTED firmware->addOption("PXX", QCoreApplication::translate("Firmware", "Support of FrSky PXX protocol"));
-  firmware->addOption("DSM2", QCoreApplication::translate("Firmware", "Support for DSM2 modules"));
-  firmware->addOption("ppmca", QCoreApplication::translate("Firmware", "PPM center adjustment in limits"));
-  firmware->addOption("gvars", QCoreApplication::translate("Firmware", "Global variables"), GVARS_VARIANT);
-  firmware->addOption("symlimits", QCoreApplication::translate("Firmware", "Symetrical Limits"));
-  firmware->addOptions(nav_options);
-  firmware->addOption("sp22", QCoreApplication::translate("Firmware", "SmartieParts 2.2 Backlight support"));
-  firmware->addOption("autosource", QCoreApplication::translate("Firmware", "In model setup menus automatically set source by moving the control"));
-  firmware->addOption("autoswitch", QCoreApplication::translate("Firmware", "In model setup menus automatically set switch by moving the control"));
-  firmware->addOption("dblkeys", QCoreApplication::translate("Firmware", "Enable resetting values by pressing up and down at the same time"));
-  firmware->addOption("nographics", QCoreApplication::translate("Firmware", "No graphical check boxes and sliders"));
-  firmware->addOption("battgraph", QCoreApplication::translate("Firmware", "Battery graph"));
-  firmware->addOption("nobold", QCoreApplication::translate("Firmware", "Don't use bold font for highlighting active items"));
-  firmware->addOption("thrtrace", QCoreApplication::translate("Firmware", "Enable the throttle trace in Statistics"));
-  firmware->addOption("pgbar", QCoreApplication::translate("Firmware", "EEprom write Progress bar"));
-  firmware->addOption("imperial", QCoreApplication::translate("Firmware", "Imperial units"));
-  firmware->addOption("sqt5font", QCoreApplication::translate("Firmware", "Use alternative SQT5 font"));
-  addOpenTxCommonOptions(firmware);
+  firmware = new OpenTxFirmware("opentx-9xrpro", Firmware::tr("Turnigy 9XR-PRO"), BOARD_9XRPRO);
+  addOpenTxArm9xOptions(firmware, false);
   registerOpenTxFirmware(firmware);
 
   /* ar9x board */
-  firmware = new OpenTxFirmware("opentx-ar9x", QCoreApplication::translate("Firmware", "9X with AR9X board"), BOARD_AR9X);
-  firmware->addOption("heli", QCoreApplication::translate("Firmware", "Enable HELI menu and cyclic mix support"));
-  firmware->addOption("gvars", QCoreApplication::translate("Firmware", "Global variables"), GVARS_VARIANT);
-  firmware->addOption("potscroll", QCoreApplication::translate("Firmware", "Pots use in menus navigation"));
-  firmware->addOption("autosource", QCoreApplication::translate("Firmware", "In model setup menus automatically set source by moving the control"));
-  firmware->addOption("autoswitch", QCoreApplication::translate("Firmware", "In model setup menus automatically set switch by moving the control"));
-  firmware->addOption("dblkeys", QCoreApplication::translate("Firmware", "Enable resetting values by pressing up and down at the same time"));
-  firmware->addOption("nographics", QCoreApplication::translate("Firmware", "No graphical check boxes and sliders"));
-  firmware->addOption("battgraph", QCoreApplication::translate("Firmware", "Battery graph"));
-  firmware->addOption("nobold", QCoreApplication::translate("Firmware", "Don't use bold font for highlighting active items"));
-//  firmware->addOption("bluetooth", QCoreApplication::translate("Firmware", "Bluetooth interface"));
-  firmware->addOption("sqt5font", QCoreApplication::translate("Firmware", "Use alternative SQT5 font"));
-//  firmware->addOption("rtc", QCoreApplication::translate("Firmware", "Optional RTC added"));
-//  firmware->addOption("volume", QCoreApplication::translate("Firmware", "i2c volume control added"));
-  addOpenTxArmOptions(firmware);
-  addOpenTxCommonOptions(firmware);
+  firmware = new OpenTxFirmware("opentx-ar9x", Firmware::tr("9X with AR9X board"), BOARD_AR9X);
+  addOpenTxArm9xOptions(firmware);
+  //firmware->addOption("rtc", Firmware::tr("Optional RTC added"));
+  //firmware->addOption("volume", Firmware::tr("i2c volume control added"));
   registerOpenTxFirmware(firmware);
 
   /* Sky9x board */
-  firmware = new OpenTxFirmware("opentx-sky9x", QCoreApplication::translate("Firmware", "9X with Sky9x board"), BOARD_SKY9X);
-  firmware->addOption("heli", QCoreApplication::translate("Firmware", "Enable HELI menu and cyclic mix support"));
-  firmware->addOption("gvars", QCoreApplication::translate("Firmware", "Global variables"), GVARS_VARIANT);
-  firmware->addOption("potscroll", QCoreApplication::translate("Firmware", "Pots use in menus navigation"));
-  firmware->addOption("autosource", QCoreApplication::translate("Firmware", "In model setup menus automatically set source by moving the control"));
-  firmware->addOption("autoswitch", QCoreApplication::translate("Firmware", "In model setup menus automatically set switch by moving the control"));
-  firmware->addOption("dblkeys", QCoreApplication::translate("Firmware", "Enable resetting values by pressing up and down at the same time"));
-  firmware->addOption("nographics", QCoreApplication::translate("Firmware", "No graphical check boxes and sliders"));
-  firmware->addOption("battgraph", QCoreApplication::translate("Firmware", "Battery graph"));
-  firmware->addOption("nobold", QCoreApplication::translate("Firmware", "Don't use bold font for highlighting active items"));
-//  firmware->addOption("bluetooth", QCoreApplication::translate("Firmware", "Bluetooth interface"));
-  firmware->addOption("sqt5font", QCoreApplication::translate("Firmware", "Use alternative SQT5 font"));
-  addOpenTxArmOptions(firmware);
-  addOpenTxCommonOptions(firmware);
+  firmware = new OpenTxFirmware("opentx-sky9x", Firmware::tr("9X with Sky9x board"), BOARD_SKY9X);
+  addOpenTxArm9xOptions(firmware);
   registerOpenTxFirmware(firmware);
 
-  /* Gruvin9x board */
-  firmware = new OpenTxFirmware("opentx-gruvin9x", QCoreApplication::translate("Firmware", "9X with Gruvin9x board"), BOARD_GRUVIN9X);
-  firmware->addOption("heli", QCoreApplication::translate("Firmware", "Enable heli menu and cyclic mix support"));
-  firmware->addOption("templates", QCoreApplication::translate("Firmware", "Enable TEMPLATES menu"));
-  firmware->addOption("nofp", QCoreApplication::translate("Firmware", "No flight modes"));
-  firmware->addOption("nocurves", QCoreApplication::translate("Firmware", "Disable curves menus"));
-  firmware->addOption("sdcard", QCoreApplication::translate("Firmware", "Support for SD memory card"));
-  firmware->addOption("voice", QCoreApplication::translate("Firmware", "Used if you have modified your radio with voice mode"));
-  firmware->addOption("PXX", QCoreApplication::translate("Firmware", "Support of FrSky PXX protocol"));
-  firmware->addOptions(dsm2_options);
-  firmware->addOption("ppmca", QCoreApplication::translate("Firmware", "PPM center adjustment in limits"));
-  firmware->addOption("gvars", QCoreApplication::translate("Firmware", "Global variables"), GVARS_VARIANT);
-  firmware->addOption("symlimits", QCoreApplication::translate("Firmware", "Symetrical Limits"));
-  firmware->addOption("potscroll", QCoreApplication::translate("Firmware", "Pots use in menus navigation"));
-  firmware->addOption("autosource", QCoreApplication::translate("Firmware", "In model setup menus automatically set source by moving the control"));
-  firmware->addOption("autoswitch", QCoreApplication::translate("Firmware", "In model setup menus automatically set switch by moving the control"));
-  firmware->addOption("dblkeys", QCoreApplication::translate("Firmware", "Enable resetting values by pressing up and down at the same time"));
-  firmware->addOption("nographics", QCoreApplication::translate("Firmware", "No graphical check boxes and sliders"));
-  firmware->addOption("battgraph", QCoreApplication::translate("Firmware", "Battery graph"));
-  firmware->addOption("nobold", QCoreApplication::translate("Firmware", "Don't use bold font for highlighting active items"));
-  firmware->addOption("pgbar", QCoreApplication::translate("Firmware", "EEprom write Progress bar"));
-  firmware->addOption("imperial", QCoreApplication::translate("Firmware", "Imperial units"));
-  firmware->addOption("sqt5font", QCoreApplication::translate("Firmware", "Use alternative SQT5 font"));
-  addOpenTxCommonOptions(firmware);
-  registerOpenTxFirmware(firmware);
-
-  /* MEGA2560 board */
-  firmware = new OpenTxFirmware("opentx-mega2560", QCoreApplication::translate("Firmware", "DIY MEGA2560 radio"), BOARD_MEGA2560);
-  addOpenTxLcdOptions(firmware);
-  firmware->addOption("PWR", QCoreApplication::translate("Firmware", "Power management by soft-off circuitry"));
-  firmware->addOptions(ext_options);
-  firmware->addOption("PXX", QCoreApplication::translate("Firmware", "Support of FrSky PXX protocol"));
-  firmware->addOptions(dsm2_options);
-  firmware->addOption("heli", QCoreApplication::translate("Firmware", "Enable heli menu and cyclic mix support"));
-  firmware->addOption("templates", QCoreApplication::translate("Firmware", "Enable TEMPLATES menu"));
-  firmware->addOption("nofp", QCoreApplication::translate("Firmware", "No flight modes"));
-  firmware->addOption("nocurves", QCoreApplication::translate("Firmware", "Disable curves menus"));
-  firmware->addOption("sdcard", QCoreApplication::translate("Firmware", "Support for SD memory card"));
-  firmware->addOption("audio", QCoreApplication::translate("Firmware", "Support for radio modified with regular speaker"));
-  //firmware->addOption("voice", QCoreApplication::translate("Firmware", "Used if you have modified your radio with voice mode"));
-  addOpenTxVoiceOptions(firmware);
-  firmware->addOption("haptic", QCoreApplication::translate("Firmware", "Used if you have modified your radio with haptic mode"));
-  firmware->addOption("ppmca", QCoreApplication::translate("Firmware", "PPM center adjustment in limits"));
-  firmware->addOption("gvars", QCoreApplication::translate("Firmware", "Global variables"), GVARS_VARIANT);
-  firmware->addOption("symlimits", QCoreApplication::translate("Firmware", "Symetrical Limits"));
-  firmware->addOption("autosource", QCoreApplication::translate("Firmware", "In model setup menus automatically set source by moving the control"));
-  firmware->addOption("autoswitch", QCoreApplication::translate("Firmware", "In model setup menus automatically set switch by moving the control"));
-  firmware->addOption("dblkeys", QCoreApplication::translate("Firmware", "Enable resetting values by pressing up and down at the same time"));
-  firmware->addOption("nographics", QCoreApplication::translate("Firmware", "No graphical check boxes and sliders"));
-  firmware->addOption("battgraph", QCoreApplication::translate("Firmware", "Battery graph"));
-  firmware->addOption("nobold", QCoreApplication::translate("Firmware", "Don't use bold font for highlighting active items"));
-  firmware->addOption("pgbar", QCoreApplication::translate("Firmware", "EEprom write Progress bar"));
-  firmware->addOption("imperial", QCoreApplication::translate("Firmware", "Imperial units"));
-  firmware->addOption("sqt5font", QCoreApplication::translate("Firmware", "Use alternative SQT5 font"));
-  addOpenTxCommonOptions(firmware);
-  registerOpenTxFirmware(firmware);
+  // These are kept only for import purposes, marked as deprecated to hide from UI.
+  registerOpenTxFirmware(new OpenTxFirmware("opentx-9xr",      Firmware::tr("Turnigy 9XR"),                       BOARD_9X_M64),    true);
+  registerOpenTxFirmware(new OpenTxFirmware("opentx-9xr128",   Firmware::tr("Turnigy 9XR with m128 chip"),        BOARD_9X_M128),     true);
+  registerOpenTxFirmware(new OpenTxFirmware("opentx-9x",       Firmware::tr("9X with stock board"),               BOARD_9X_M64),    true);
+  registerOpenTxFirmware(new OpenTxFirmware("opentx-9x128",    Firmware::tr("9X with stock board and m128 chip"), BOARD_9X_M128),     true);
+  registerOpenTxFirmware(new OpenTxFirmware("opentx-gruvin9x", Firmware::tr("9X with Gruvin9x board"),            BOARD_GRUVIN9X), true);
+  registerOpenTxFirmware(new OpenTxFirmware("opentx-mega2560", Firmware::tr("DIY MEGA2560 radio"),                BOARD_MEGA2560), true);
 
   Firmware::setDefaultVariant(Firmware::getFirmwareForId("opentx-x9d+"));
   Firmware::setCurrentVariant(Firmware::getDefaultVariant());
