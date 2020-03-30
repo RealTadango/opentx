@@ -219,6 +219,10 @@
   #define IS_SLAVE_TRAINER()           (g_model.trainerData.mode == TRAINER_MODE_SLAVE)
 #endif
 
+#if defined(LUA) || defined(PXX2) || defined(MULTIMODULE)
+  #define RADIO_TOOLS
+#endif
+
 // RESX range is used for internal calculation; The menu says -100.0 to 100.0; internally it is -1024 to 1024 to allow some optimizations
 #define RESX_SHIFT 10
 #define RESX       1024
@@ -250,17 +254,6 @@
 #endif
 
 #include "myeeprom.h"
-
-inline void memclear(void * p, size_t size)
-{
-  memset(p, 0, size);
-}
-
-inline bool is_memclear(void * p, size_t size)
-{
-  uint8_t * buf = (uint8_t *)p;
-  return buf[0] == 0 && memcmp(buf, buf + 1, size - 1) == 0;
-}
 
 void memswap(void * a, void * b, uint8_t size);
 
@@ -642,7 +635,7 @@ static inline void GET_ADC_IF_MIXER_NOT_RUNNING()
 
 #include "sbus.h"
 
-void backlightOn();
+void resetBacklightTimeout();
 void checkBacklight();
 
 #define BITMASK(bit) (1<<(bit))
