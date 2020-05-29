@@ -293,9 +293,7 @@ void generalDefault()
   g_eeGeneral.stickMode = DEFAULT_MODE - 1;
 #endif
 
-#if defined(FRSKY_RELEASE)
-  g_eeGeneral.templateSetup = 17; /* TAER */
-#endif
+  g_eeGeneral.templateSetup = DEFAULT_TEMPLATE_SETUP;
 
   g_eeGeneral.backlightMode = e_backlight_mode_all;
   g_eeGeneral.lightAutoOff = 2;
@@ -1939,6 +1937,10 @@ void opentxInit()
 
 #if defined(AUX_SERIAL)
   auxSerialInit(g_eeGeneral.auxSerialMode, modelTelemetryProtocol());
+#endif
+
+#if defined(AUX2_SERIAL)
+  aux2SerialInit(g_eeGeneral.aux2SerialMode, modelTelemetryProtocol());
 #endif
 
 #if MENUS_LOCK == 1
