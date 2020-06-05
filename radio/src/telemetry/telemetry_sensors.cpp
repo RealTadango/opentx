@@ -90,6 +90,8 @@ void TelemetryItem::setValue(const TelemetrySensor & sensor, int32_t val, uint32
     uint32_t data = uint32_t(newVal);
     uint8_t cellsCount = (data >> 24);
     uint8_t cellIndex = ((data >> 16) & 0x0F);
+    if (cellIndex >= MAX_CELLS)
+      return;
     uint16_t cellValue = (data & 0xFFFF);
     if (cellsCount == 0) {
       cellsCount = (cellIndex >= cells.count ? cellIndex + 1 : cells.count);
@@ -497,7 +499,7 @@ int setTelemetryValue(TelemetryProtocol protocol, uint16_t id, uint8_t subId, ui
 {
   bool sensorFound = false;
 
-  for (int index=0; index<MAX_TELEMETRY_SENSORS; index++) {
+  for (int index = 0; index < MAX_TELEMETRY_SENSORS; index++) {
     TelemetrySensor & telemetrySensor = g_model.telemetrySensors[index];
     if (telemetrySensor.type == TELEM_TYPE_CUSTOM && telemetrySensor.id == id && telemetrySensor.subId == subId && (telemetrySensor.isSameInstance(protocol, instance) || g_model.ignoreSensorIds)) {
       telemetryItems[index].setValue(telemetrySensor, value, unit, prec);
