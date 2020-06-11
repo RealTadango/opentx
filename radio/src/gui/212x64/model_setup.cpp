@@ -536,7 +536,7 @@ void menuModelSetup(event_t event)
         break;
 
       case ITEM_MODEL_SETUP_THROTTLE_REVERSED:
-        ON_OFF_MENU_ITEM(g_model.throttleReversed, MODEL_SETUP_2ND_COLUMN, y, STR_THROTTLEREVERSE, attr, event ) ;
+        ON_OFF_MENU_ITEM(g_model.throttleReversed, MODEL_SETUP_2ND_COLUMN, y, STR_THROTTLEREVERSE, attr, event );
         break;
 
       case ITEM_MODEL_SETUP_THROTTLE_TRACE:
@@ -1141,7 +1141,7 @@ void menuModelSetup(event_t event)
             lcdDrawText(INDENT_WIDTH, y, STR_RECEIVER_NUM);
           }
           if (isModuleBindRangeAvailable(moduleIdx)) {
-            if (!IS_RX_MULTI(moduleIdx)) {
+            if (isModuleRxNumAvailable(moduleIdx)) {
               lcdDrawNumber(MODEL_SETUP_2ND_COLUMN, y, g_model.header.modelId[moduleIdx], (l_posHorz == 0 ? attr : 0) | LEADING0 | LEFT, 2);
               bindButtonPos = lcdNextPos + FW;
             }
