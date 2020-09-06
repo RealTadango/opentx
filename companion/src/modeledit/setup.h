@@ -97,6 +97,7 @@ class ModulePanel : public ModelPanel
     void onFailsafeUsecChanged(int value);
     void onFailsafePercentChanged(double value);
     void onFailsafesDisplayValueTypeChanged(int type);
+    void onRfFreqChanged(int freq);
     void updateFailsafe(unsigned channel);
     void on_optionValue_editingFinished();
     void onClearAccessRxClicked();
@@ -153,7 +154,7 @@ class SetupPanel : public ModelPanel
     void on_potWarningMode_currentIndexChanged(int index);
     void on_editText_clicked();
     void onTimerCustomContextMenuRequested(QPoint pos);
-    void cmTimerClear();
+    void cmTimerClear(bool prompt = true);
     void cmTimerClearAll();
     void cmTimerCopy();
     void cmTimerCut();

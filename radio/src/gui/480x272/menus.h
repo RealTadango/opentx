@@ -544,6 +544,11 @@ inline void POPUP_MENU_SELECT_ITEM(uint8_t index)
   popupMenuSelectedItem =  (index > 0 ? (index < popupMenuItemsCount ? index : popupMenuItemsCount - 1) : 0);
 }
 
+inline void POPUP_MENU_TITLE(const char * s)
+{
+  popupMenuTitle = s;
+}
+
 inline void POPUP_MENU_START(PopupMenuHandler handler)
 {
   if (handler != popupMenuHandler) {
@@ -557,6 +562,7 @@ inline void CLEAR_POPUP()
 {
   warningText = nullptr;
   warningInfoText = nullptr;
+  popupMenuTitle = nullptr;
   popupMenuHandler = nullptr;
   popupMenuItemsCount = 0;
   // TODO ? popupFunc = nullptr;
