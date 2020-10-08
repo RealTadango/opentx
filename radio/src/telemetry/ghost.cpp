@@ -20,8 +20,8 @@
 
 #include "opentx.h"
 
-const char * const ghstRfProfileValue[GHST_RF_PROFILE_COUNT] = { "Auto", "Norm", "Race", "Pure", "Long" };
-const char * const ghstVtxBandName[GHST_VTX_BAND_COUNT] = { "- - -" , "IRC", "Race", "BandE", "BandB", "BandA" };
+const char *ghstRfProfileValue[GHST_RF_PROFILE_COUNT] = { "Auto", "Norm", "Race", "Pure", "Long", "Unused", "Race2", "Pure2" };
+const char *ghstVtxBandName[GHST_VTX_BAND_COUNT] = { "- - -" , "IRC", "Race", "BandE", "BandB", "BandA" };
 
 struct GhostSensor
 {
@@ -86,11 +86,8 @@ void processGhostTelemetryValue(uint8_t index, int32_t value)
 
 void processGhostTelemetryValueString(const GhostSensor * sensor, const char * str)
 {
-  int i = 0;
   if (TELEMETRY_STREAMING()) {
-    do {
-      setTelemetryValue(PROTOCOL_TELEMETRY_GHOST, sensor->id, 0, 0, str[i], UNIT_TEXT, i);
-    } while (str[i++] != 0);
+    setTelemetryText(PROTOCOL_TELEMETRY_GHOST, sensor->id, 0, 0, str);
   }
 }
 
@@ -130,11 +127,11 @@ void processGhostTelemetryFrame()
         bluetooth.write(telemetryRxBuffer, telemetryRxBufferCount);
       }
 #endif
-      uint8_t rssiVal = min<uint8_t>(telemetryRxBuffer[3], 100);
+      uint8_t rssiVal = min<uint8_t>(telemetryRxBuffer[3], 120); // RSSI is a negative value, but sent as a positive integer.
       uint8_t lqVal = min<uint8_t>(telemetryRxBuffer[4], 100);
       uint8_t snrVal = min<uint8_t>(telemetryRxBuffer[5], 100);
 
-      processGhostTelemetryValue(GHOST_ID_RX_RSSI, rssiVal);
+      processGhostTelemetryValue(GHOST_ID_RX_RSSI, - rssiVal);
       processGhostTelemetryValue(GHOST_ID_RX_LQ, lqVal);
       processGhostTelemetryValue(GHOST_ID_RX_SNR, snrVal);
 
