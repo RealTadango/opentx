@@ -277,7 +277,7 @@
   #define LEN_VUNITSSYSTEM     TR("\006", "\010")
   #define TR_VUNITSSYSTEM      TR("Metric""Imper.", "Metric\0 ""Imperial")
   #define LEN_VTELEMUNIT       "\003"
-  #define TR_VTELEMUNIT        "-\0 ""V\0 ""A\0 ""mA\0""kts""m/s""f/s""kmh""mph""m\0 ""ft\0""@C\0""@F\0""%\0 ""mAh""W\0 ""mW\0""dB\0""rpm""g\0 ""@\0 ""rad""ml\0""fOz""mlm""Hz\0""mS\0""uS\0"
+  #define TR_VTELEMUNIT        "-\0 ""V\0 ""A\0 ""mA\0""kts""m/s""f/s""kmh""mph""m\0 ""ft\0""@C\0""@F\0""%\0 ""mAh""W\0 ""mW\0""dB\0""rpm""g\0 ""@\0 ""rad""ml\0""fOz""mlm""Hz\0""mS\0""uS\0""km\0"
 
 #define STR_V            (STR_VTELEMUNIT+1)
 #define STR_A            (STR_VTELEMUNIT+4)
@@ -302,8 +302,25 @@
 #define LEN_VSWASHTYPE   "\004"
 #define TR_VSWASHTYPE    "--- ""120 ""120X""140 ""90\0"
 
-#define LEN_VKEYS        "\005"
-#define TR_VKEYS         TR("Menu\0""Sair\0""Desce""Sobe\0""Direi""Esqda", "Menu\0""Exit\0""Enter""Page\0""Plus\0""Minus")
+#if defined(PCBHORUS)
+  #define LEN_VKEYS            "\005"
+  #define TR_VKEYS             "PGUP\0""PGDN\0""ENTER""MDL\0 ""RTN\0 ""TELE\0""SYS\0 "
+#elif defined(RADIO_FAMILY_JUMPER_T12)
+  #define LEN_VKEYS            "\005"
+  #define TR_VKEYS             "Exit\0""Enter""Down\0""Up\0  ""Right""Left\0"
+#elif defined(RADIO_TX12)
+  #define LEN_VKEYS            "\005"
+  #define TR_VKEYS             "Exit\0""Enter""Up\0  ""Down\0""SYS\0 ""MDL\0 ""TELE\0"
+#elif defined(RADIO_T8)
+  #define LEN_VKEYS                    "\005"
+  #define TR_VKEYS                     "RTN\0 ""ENTER""PGUP\0""PGDN\0""SYS\0 ""MDL\0 ""UP\0  ""DOWN\0"
+#elif defined(PCBTARANIS)
+  #define LEN_VKEYS            "\005"
+  #define TR_VKEYS             "Menu\0""Exit\0""Enter""Page\0""Plus\0""Minus"
+#else
+  #define LEN_VKEYS            "\005"
+  #define TR_VKEYS             "Menu\0""Exit\0""Ned\0 ""Upp\0 ""Höger""Vänst"
+#endif
 
 #define LEN_VSWITCHES    "\003"
 #define LEN_VSRCRAW      "\004"
@@ -445,7 +462,7 @@
 #if defined(PCBSKY9X) && defined(REVX)
   #define TR_OUTPUT_TYPE       INDENT "Output"
 #endif
-#define TR_PROTO               INDENT"Proto"
+#define TR_PROTOCOL            "Proto"
 #define TR_PPMFRAME            "PPM frame"
 #define TR_REFRESHRATE               TR(INDENT "Refresh", INDENT "Refresh rate")
 #define STR_WARN_BATTVOLTAGE           TR(INDENT "Output is VBAT: ", INDENT "Warning: output level is VBAT: ")
@@ -528,6 +545,7 @@
 #define TR_BEEPCOUNTDOWN       INDENT "Beep Regressivo"
 #define TR_PERSISTENT          INDENT "Persist."
 #define TR_BACKLIGHT_LABEL     "Backlight"
+#define TR_GHOST_MENU_LABEL            "GHOST MENU"
 #define TR_BLDELAY             INDENT "Tempo Backlight"
 #define TR_BLONBRIGHTNESS      INDENT "ON Brightness"
 #define TR_BLOFFBRIGHTNESS     INDENT "OFF Brightness"
@@ -643,6 +661,7 @@
 #define TR_SYNCMENU            "Sync [MENU]"
 #define TR_MULTI_RFTUNE        TR("Freq tune", "RF Freq. fine tune")
 #define TR_MULTI_RFPOWER               "RF power"
+#define TR_MULTI_WBUS                  "Output"
 #define TR_MULTI_TELEMETRY     "Telemetry"
 #define TR_MULTI_VIDFREQ       TR("Vid. freq.", "Video frequency")
 #define TR_RFPOWER       "RF Power"
@@ -710,6 +729,7 @@
 #define TR_NO_SDCARD           "Sem SDCARD"
 #define TR_WAITING_FOR_RX              "Waiting for RX..."
 #define TR_WAITING_FOR_TX              "Waiting for TX..."
+#define TR_WAITING_FOR_MODULE          TR("Waiting module", "Waiting for module...")
 #define TR_NO_TOOLS                    "No tools available"
 #define TR_NORMAL                      "Normal"
 #define TR_NOT_INVERTED                "Not inv"
@@ -785,7 +805,7 @@
 #define TR_NO_MODELS_ON_SD     "Sem Modelo no SD"
 #define TR_NO_BITMAPS_ON_SD    "No Bitmaps on SD"
 #define TR_NO_SCRIPTS_ON_SD    "No Scripts on SD"
-#define TR_SCRIPT_SYNTAX_ERROR "Script syntax error"
+#define TR_SCRIPT_SYNTAX_ERROR TR("Syntax error", "Script syntax error")
 #define TR_SCRIPT_PANIC        "Script panic"
 #define TR_SCRIPT_KILLED       "Script killed"
 #define TR_SCRIPT_ERROR        "Unknown error"
@@ -851,6 +871,7 @@
 #define TR_FLASH_INTERNAL_MULTI        TR("Flash Int. Multi", "Flash Internal Multi")
 #define TR_FLASH_EXTERNAL_MODULE       "Flash external module"
 #define TR_FLASH_EXTERNAL_MULTI        TR("Flash Ext. Multi", "Flash External Multi")
+#define TR_FLASH_EXTERNAL_ELRS         TR("Flash Ext. ELRS", "Flash External ELRS")
 #define TR_FIRMWARE_UPDATE_ERROR TR("FW update Error","Firmware update error")
 #define TR_FIRMWARE_UPDATE_SUCCESS     "Flash successful"
 #define TR_WRITING             "Writing..."
@@ -1113,10 +1134,18 @@
 #define TR_ABOUT_MARTIN_1      "Martin Hotar"
 #define TR_ABOUT_MARTIN_2      "Graphics designer"
 
-#if defined(PCBTARANIS)
-  #define TR_ABOUT_HARDWARE_1  "FrSky"
-  #define TR_ABOUT_HARDWARE_2  "Hardware designer/producer"
-  #define TR_ABOUT_HARDWARE_3  "Firmware contributor"
+#if defined(MANUFACTURER_FRSKY)
+  #define TR_ABOUT_HARDWARE_1          "FrSky"
+  #define TR_ABOUT_HARDWARE_2          TR("Hardware design/producer", "Hardware designer/producer")
+  #define TR_ABOUT_HARDWARE_3          "Firmware contributor"
+#elif defined(MANUFACTURER_RADIOMASTER)
+  #define TR_ABOUT_HARDWARE_1          "Radiomaster"
+  #define TR_ABOUT_HARDWARE_2          TR("Hardware design/producer", "Hardware designer/producer")
+  #define TR_ABOUT_HARDWARE_3          "Firmware contributor"
+#elif defined(MANUFACTURER_JUMPER)
+  #define TR_ABOUT_HARDWARE_1          "JumperRC"
+  #define TR_ABOUT_HARDWARE_2          TR("Hardware design/producer", "Hardware designer/producer")
+  #define TR_ABOUT_HARDWARE_3          "Firmware contributor"
 #else
   #define TR_ABOUT_HARDWARE_1  "Brent Nelson"
   #define TR_ABOUT_HARDWARE_2  "Sky9x designer/producer"
@@ -1215,7 +1244,7 @@
 #define TR_MENU_INVERT         "Invert"
 #define TR_JITTER_FILTER       "ADC Filter"
 #define TR_RTC_CHECK           TR("Check RTC", "Check RTC voltage")
-#define TR_AUTH_FAILURE                "Auth-failure"
+#define TR_AUTH_FAILURE        "Auth-failure"
 
 #define ZSTR_VFR               "VFR"
 #define ZSTR_RSSI              "RSSI"
@@ -1372,3 +1401,6 @@
 #define ZSTR_SERVO_VOLTAGE             "SrvV"
 #define ZSTR_SERVO_TEMPERATURE         "SrvT"
 #define ZSTR_SERVO_STATUS              "SrvS"
+#define ZSTR_LOSS                      "Loss"
+#define ZSTR_SPEED                     "Spd "
+#define ZSTR_FLOW                      "Flow"

@@ -204,6 +204,7 @@ void TelemetryItem::setValue(const TelemetrySensor & sensor, int32_t val, uint32
     }
   }
   else if (unit == UNIT_TEXT) {
+    // Should be handled at telemetry protocol level
     return;
   }
   else {
@@ -557,6 +558,10 @@ int setTelemetryValue(TelemetryProtocol protocol, uint16_t id, uint8_t subId, ui
 
       case PROTOCOL_TELEMETRY_HOTT:
         hottSetDefault(index, id, subId, instance);
+        break;
+
+      case PROTOCOL_TELEMETRY_MLINK:
+        mlinkSetDefault(index, id, subId, instance);
         break;
 #endif
 

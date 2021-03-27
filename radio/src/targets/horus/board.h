@@ -546,7 +546,8 @@ void backlightInit();
 #else
 void backlightEnable(uint8_t dutyCycle = 0);
 #endif
-#define BACKLIGHT_LEVEL_MAX   100
+#define BACKLIGHT_LEVEL_MAX     100
+#define BACKLIGHT_FORCED_ON     BACKLIGHT_LEVEL_MAX + 1
 #if defined(PCBX12S)
 #define BACKLIGHT_LEVEL_MIN   5
 #elif defined(RADIO_FAMILY_T16)
@@ -574,9 +575,9 @@ void usbJoystickUpdate();
   #define USB_MANUFACTURER             'J', 'u', 'm', 'p', 'e', 'r', ' ', ' '  /* 8 bytes */
   #define USB_PRODUCT                  'T', '1', '8', ' ', ' ', ' ', ' ', ' '  /* 8 Bytes */
 #elif defined(RADIO_TX16S)
-  #define USB_NAME                     "RadioMas TX16S"
-  #define USB_MANUFACTURER             'R', 'a', 'd', 'i', 'o', 'M', 'a', 's'  /* 8 bytes */
-  #define USB_PRODUCT                  'T', 'X', '1', '6', 'S', ' ', ' ', ' '  /* 8 Bytes */
+  #define USB_NAME                     "RM TX16S"
+  #define USB_MANUFACTURER             'R', 'M', '_', 'T', 'X', ' ', ' ', ' '  /* 8 bytes */
+  #define USB_PRODUCT                  'R', 'M', ' ', 'T', 'X', '1', '6', 'S'  /* 8 Bytes */
 #elif defined(PCBX10)
   #define USB_NAME                     "FrSky X10"
   #define USB_MANUFACTURER             'F', 'r', 'S', 'k', 'y', ' ', ' ', ' '  /* 8 bytes */
@@ -634,9 +635,18 @@ void sportUpdatePowerInit();
 #endif
 
 // Aux serial port driver
+#if defined(RADIO_TX16S)
+  #define DEBUG_BAUDRATE                  400000
+  #define LUA_DEFAULT_BAUDRATE            115200
+#else
+  #define DEBUG_BAUDRATE                  115200
+  #define LUA_DEFAULT_BAUDRATE            115200
+#endif
 #if defined(AUX_SERIAL_GPIO)
-#define DEBUG_BAUDRATE                  115200
 extern uint8_t auxSerialMode;
+#if defined __cplusplus
+void auxSerialSetup(unsigned int baudrate, bool dma, uint16_t length = USART_WordLength_8b, uint16_t parity = USART_Parity_No, uint16_t stop = USART_StopBits_1);
+#endif
 void auxSerialInit(unsigned int mode, unsigned int protocol);
 void auxSerialPutc(char c);
 #define auxSerialTelemetryInit(protocol) auxSerialInit(UART_MODE_TELEMETRY, protocol)
@@ -656,6 +666,9 @@ void auxSerialPowerOff();
 // Aux2 serial port driver
 #if defined(AUX2_SERIAL)
 extern uint8_t aux2SerialMode;
+#if defined __cplusplus
+void aux2SerialSetup(unsigned int baudrate, bool dma, uint16_t length = USART_WordLength_8b, uint16_t parity = USART_Parity_No, uint16_t stop = USART_StopBits_1);
+#endif
 void aux2SerialInit(unsigned int mode, unsigned int protocol);
 void aux2SerialPutc(char c);
 #define aux2SerialTelemetryInit(protocol) aux2SerialInit(UART_MODE_TELEMETRY, protocol)
@@ -708,6 +721,7 @@ void bluetoothDisable();
 extern DMAFifo<512> telemetryFifo;
 typedef DMAFifo<32> AuxSerialRxFifo;
 extern AuxSerialRxFifo auxSerialRxFifo;
+extern AuxSerialRxFifo aux2SerialRxFifo;
 extern volatile uint32_t externalModulePort;
 #endif
 

@@ -515,7 +515,7 @@ int getSwitchWarningsCount()
 
 inline uint8_t MODULE_TYPE_ROWS(int moduleIdx)
 {
-  if (isModuleXJT(moduleIdx) || isModuleR9MNonAccess(moduleIdx) || isModuleDSM2(moduleIdx) || isModulePXX2(moduleIdx) || isModuleAFHDS3(moduleIdx))
+  if (isModuleXJT(moduleIdx) || isModuleR9MNonAccess(moduleIdx) || isModuleDSM2(moduleIdx) || isModuleISRM(moduleIdx) || isModuleAFHDS3(moduleIdx))
     return 1;
 #if defined(MULTIMODULE)
   else if (isModuleMultimodule(moduleIdx)) {
@@ -577,7 +577,7 @@ void onModelAntennaSwitchConfirm(const char * result)
          MODULE_TYPE_ROWS(INTERNAL_MODULE),         /* ITEM_MODEL_SETUP_INTERNAL_MODULE_TYPE*/ \
          MULTIMODULE_STATUS_ROWS(INTERNAL_MODULE)   /* ITEM_MODEL_SETUP_INTERNAL_MODULE_STATUS, ITEM_MODEL_SETUP_INTERNAL_MODULE_SYNCSTATUS */ \
          MODULE_CHANNELS_ROWS(INTERNAL_MODULE),     /* ITEM_MODEL_SETUP_INTERNAL_MODULE_CHANNELS*/ \
-         IF_NOT_ACCESS_MODULE_RF(INTERNAL_MODULE, IF_INTERNAL_MODULE_ON(IF_INTERNAL_MODULE_ON(isModuleRxNumAvailable(INTERNAL_MODULE) ? (uint8_t)2 : (uint8_t)1))), /* *ITEM_MODEL_SETUP_INTERNAL_MODULE_NOT_ACCESS_RXNUM_BIND_RANGE */\
+         IF_NOT_ACCESS_MODULE_RF(INTERNAL_MODULE, MODULE_BIND_ROWS(INTERNAL_MODULE)), /* *ITEM_MODEL_SETUP_INTERNAL_MODULE_NOT_ACCESS_RXNUM_BIND_RANGE */\
          IF_ACCESS_MODULE_RF(INTERNAL_MODULE, 0),   /* ITEM_MODEL_SETUP_INTERNAL_MODULE_PXX2_MODEL_NUM*/ \
          MODULE_OPTION_ROW(INTERNAL_MODULE),        /* ITEM_MODEL_SETUP_INTERNAL_MODULE_OPTIONS */ \
          MULTIMODULE_MODULE_ROWS(INTERNAL_MODULE)   /* ITEM_MODEL_SETUP_INTERNAL_MODULE_AUTOBIND */  \
@@ -1549,6 +1549,7 @@ bool menuModelSetup(event_t event)
           lcdDrawText(MENUS_MARGIN_LEFT + INDENT_WIDTH, y, STR_RECEIVER);
           int l_posHorz = menuHorizontalPosition;
           coord_t bindButtonPos = MODEL_SETUP_2ND_COLUMN;
+          // RXNUM
           if (isModuleRxNumAvailable(moduleIdx)) {
             lcdDrawNumber(MODEL_SETUP_2ND_COLUMN, y, g_model.header.modelId[moduleIdx], (l_posHorz==0 ? attr : 0) | LEADING0 | LEFT, 2);
             bindButtonPos += 40;
@@ -1572,12 +1573,13 @@ bool menuModelSetup(event_t event)
           else if (attr) {
             l_posHorz += 1;
           }
+          // BIND - RANGE
           if (isModuleBindRangeAvailable(moduleIdx)) {
             drawButton(bindButtonPos, y, STR_MODULE_BIND, (moduleState[moduleIdx].mode == MODULE_MODE_BIND ? BUTTON_ON : BUTTON_OFF) | (l_posHorz==1 ? attr : 0));
             if (isModuleRangeAvailable(moduleIdx)) {
               drawButton(bindButtonPos + 80, y, STR_MODULE_RANGE, (moduleState[moduleIdx].mode == MODULE_MODE_RANGECHECK ? BUTTON_ON : BUTTON_OFF) | (l_posHorz==2 ? attr : 0));
             }
-            uint8_t newFlag = 0;
+            uint8_t newFlag = MODULE_MODE_NORMAL;
 #if defined(MULTIMODULE)
             if (getMultiBindStatus(moduleIdx) == MULTI_BIND_FINISHED) {
               setMultiBindStatus(moduleIdx, MULTI_NORMAL_OPERATION);
@@ -1674,34 +1676,33 @@ bool menuModelSetup(event_t event)
       {
 #if defined(MULTIMODULE)
         if (MULTIMODULE_PROTOCOL_KNOWN(moduleIdx)) {
+          const char * title = getMultiOptionTitle(moduleIdx);
+
+          lcdDrawText(MENUS_MARGIN_LEFT + INDENT_WIDTH, y, title);
+          if (title == STR_MULTI_RFTUNE) {
+            lcdDrawNumber(LCD_W - 10, y, TELEMETRY_RSSI(), RIGHT, 0, "RSSI(", ")");
+          }
+
           int optionValue = g_model.moduleData[moduleIdx].multi.optionValue;
-
-          MultiModuleStatus &status = getMultiModuleStatus(moduleIdx);
           const uint8_t multi_proto = g_model.moduleData[moduleIdx].getMultiProtocol();
-          if (status.isValid()) {
-            lcdDrawText(MENUS_MARGIN_LEFT + INDENT_WIDTH, y, mm_options_strings::options[status.optionDisp]);
-            if (attr && status.optionDisp == 2) {
-              lcdDrawNumber(LCD_W - 10, y, TELEMETRY_RSSI(), RIGHT, 0, "RSSI(", ")");
-            }
-          }
-          else {
-            const mm_protocol_definition * pdef = getMultiProtocolDefinition(multi_proto);
-            if (pdef->optionsstr) {
-              lcdDrawText(MENUS_MARGIN_LEFT + INDENT_WIDTH, y, pdef->optionsstr);
-              if (attr && pdef->optionsstr == STR_MULTI_RFTUNE) {
-                lcdDrawNumber(LCD_W - 10, y, TELEMETRY_RSSI(), RIGHT, 0, "RSSI(", ")");
-              }
-            }
-          }
-
           int8_t min, max;
           getMultiOptionValues(multi_proto, min, max);
 
-          if (multi_proto == MODULE_SUBTYPE_MULTI_FS_AFHDS2A) {
-            lcdDrawNumber(MODEL_SETUP_2ND_COLUMN, y, 50 + 5 * optionValue, LEFT | attr);
-          }
-          else if (multi_proto == MODULE_SUBTYPE_MULTI_FRSKY_R9) {
+          if (title == STR_MULTI_RFPOWER) {
             lcdDrawTextAtIndex(MODEL_SETUP_2ND_COLUMN, y, STR_MULTI_POWER, optionValue, LEFT | attr);
+            min = 0;
+            max = 15;
+          }
+          else if (title == STR_MULTI_TELEMETRY) {
+            lcdDrawTextAtIndex(MODEL_SETUP_2ND_COLUMN, y, STR_MULTI_TELEMETRY_MODE, optionValue, LEFT | attr);
+          }
+          else if (title == STR_MULTI_WBUS) {
+            lcdDrawTextAtIndex(MODEL_SETUP_2ND_COLUMN, y, STR_MULTI_WBUS_MODE, optionValue, LEFT | attr);
+            min = 0;
+            max = 1;
+          }
+          else if (multi_proto == MODULE_SUBTYPE_MULTI_FS_AFHDS2A) {
+            lcdDrawNumber(MODEL_SETUP_2ND_COLUMN, y, 50 + 5 * optionValue, LEFT | attr);
           }
           else if (multi_proto == MODULE_SUBTYPE_MULTI_DSM2) {
             optionValue = optionValue & 0x01;
@@ -1713,6 +1714,7 @@ bool menuModelSetup(event_t event)
             else
               lcdDrawNumber(MODEL_SETUP_2ND_COLUMN, y, optionValue, LEFT | attr);
           }
+
           if (attr) {
             CHECK_INCDEC_MODELVAR(event, optionValue, min, max);
             if (checkIncDec_Ret) {

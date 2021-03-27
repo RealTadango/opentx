@@ -18,8 +18,7 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _MODELPRINTER_H_
-#define _MODELPRINTER_H_
+#pragma once
 
 #include <QString>
 #include <QStringList>
@@ -116,19 +115,12 @@ class ModelPrinter: public QObject
     QString printLabelValue(const QString & lbl, const QString & val, const bool sep = false);
     QString printLabelValues(const QString & lbl, const QStringList & vals, const bool sep = false);
     QString printRssiAlarmsDisabled(bool mb);
-    QString printTelemetrySource(int val);
     QString printVarioSource(unsigned int val);
     QString printVarioCenterSilent(bool mb);
     QString printVoltsSource(unsigned int val);
     QString printCurrentSource(unsigned int val);
     QString printMahPersistent(bool mb);
     QString printIgnoreSensorIds(bool mb);
-    QString printSensorType(unsigned int val);
-    QString printSensorFormula(unsigned int val);
-    QString printSensorCells(unsigned int val);
-    QString printSensorTypeCond(unsigned int idx);
-    QString printSensorParams(unsigned int idx);
-    QString printSensorDetails(unsigned int idx);
     QString printTelemetryScreenType(unsigned int val);
     QString printTelemetryScreen(unsigned int idx, unsigned int line, unsigned int width);
     QString printChecklist();
@@ -139,5 +131,3 @@ class ModelPrinter: public QObject
     const ModelData & model;
 
 };
-
-#endif // _MODELPRINTER_H_

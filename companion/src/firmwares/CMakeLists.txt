@@ -2,16 +2,21 @@
 set(firmwares_SRCS
   adjustmentreference.cpp
   boards.cpp
+  curvedata.cpp
   curvereference.cpp
   customfunctiondata.cpp
   eeprominterface.cpp
   generalsettings.cpp
   gvardata.cpp
-  io_data.cpp
+  input_data.cpp
+  flightmodedata.cpp
+  heli_data.cpp
   logicalswitchdata.cpp
+  mixdata.cpp
   modeldata.cpp
   moduledata.cpp
   multiprotocols.cpp
+  output_data.cpp
   radiodata.cpp
   radiodataconversionstate.cpp
   rawsource.cpp
@@ -30,10 +35,17 @@ string(REPLACE ".cpp" ".h" firmwares_HDRS "${firmwares_SRCS}")
 list(APPEND firmwares_HDRS
   eepromimportexport.h
   moduledata.h
+  helpersdata.h
   )
 
+set(firmwares_QT
+  curvereference.h
+  )
+
+qt5_wrap_cpp(firmwares_SRCS ${firmwares_QT})
+
 add_library(firmwares ${firmwares_SRCS} ${firmwares_HDRS})
-target_link_libraries(firmwares ${CPN_COMMON_LIB} Qt5::Core Qt5::Xml Qt5::Widgets)
+target_link_libraries(firmwares ${CPN_COMMON_LIB} datamodels Qt5::Core Qt5::Xml Qt5::Widgets)
 target_include_directories(firmwares
   PRIVATE
     ${CMAKE_SOURCE_DIR}

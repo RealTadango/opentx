@@ -42,6 +42,8 @@ struct mm_options_strings {
   static const char* options[];
 };
 
+const uint8_t getMaxMultiOptions();
+
 struct mm_protocol_definition {
   uint8_t protocol;
   uint8_t maxSubtype;
@@ -284,9 +286,14 @@ inline bool isModulePXX1(uint8_t idx)
   return isModuleTypePXX1(g_model.moduleData[idx].type);
 }
 
+inline bool isModuleXJTLite(uint8_t idx)
+{
+  return g_model.moduleData[idx].type == MODULE_TYPE_XJT_LITE_PXX2;
+}
+
 inline bool isModulePXX2(uint8_t idx)
 {
-  return isModuleISRM(idx) || isModuleR9MAccess(idx);
+  return isModuleISRM(idx) || isModuleR9MAccess(idx) || isModuleXJTLite(idx);
 }
 
 inline bool isModuleRFAccess(uint8_t idx)
@@ -666,10 +673,6 @@ inline void getMultiOptionValues(int8_t multi_proto, int8_t & min, int8_t & max)
       min = -1;
       max = 84;
       break;
-    case MODULE_SUBTYPE_MULTI_FRSKY_R9:
-      min = 0;  // 10mW
-      max = 5;  // 300mW
-      break;
     default:
       min = -128;
       max = 127;
@@ -677,5 +680,21 @@ inline void getMultiOptionValues(int8_t multi_proto, int8_t & min, int8_t & max)
   }
 }
 #endif
+
+inline const char * getRssiLabel()
+{
+#if defined(MULTIMODULE)
+  if (telemetryProtocol == PROTOCOL_TELEMETRY_MULTIMODULE && (g_model.moduleData[EXTERNAL_MODULE].getMultiProtocol() == MODULE_SUBTYPE_MULTI_FS_AFHDS2A
+                                                           || g_model.moduleData[EXTERNAL_MODULE].getMultiProtocol() == MODULE_SUBTYPE_MULTI_HOTT)) {
+    return "RQly";
+  }
+#endif
+#if defined(GHOST)
+  if (telemetryProtocol == PROTOCOL_TELEMETRY_GHOST) {
+    return "RQly";
+  }
+#endif
+  return "RSSI";
+}
 
 #endif // _MODULES_HELPERS_H_

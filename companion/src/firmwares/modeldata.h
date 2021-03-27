@@ -18,15 +18,19 @@
  * GNU General Public License for more details.
  */
 
-#ifndef MODELDATA_H
-#define MODELDATA_H
+#pragma once
 
 #include "constants.h"
+#include "curvedata.h"
 #include "customfunctiondata.h"
 #include "gvardata.h"
-#include "io_data.h"
+#include "flightmodedata.h"
+#include "heli_data.h"
+#include "input_data.h"
 #include "logicalswitchdata.h"
+#include "mixdata.h"
 #include "moduledata.h"
+#include "output_data.h"
 #include "sensordata.h"
 #include "telem_data.h"
 
@@ -70,6 +74,8 @@ class TimerData {
     unsigned int countdownBeep;
     unsigned int val;
     unsigned int persistent;
+    int          countdownStart;
+    unsigned int direction;
     int          pvalue;
     void clear() { memset(reinterpret_cast<void *>(this), 0, sizeof(TimerData)); mode = RawSwitch(SWITCH_TYPE_TIMER_MODE, 0); }
     void convert(RadioDataConversionState & cstate);
@@ -283,6 +289,10 @@ class ModelData {
     bool hasExpoChildren(const int index);
     bool hasExpoSiblings(const int index);
     void removeMix(const int idx);
+    QString thrTraceSrcToString() const;
+    QString thrTraceSrcToString(const int index) const;
+    int thrTraceSrcCount() const;
+    bool isThrTraceSrcAvailable(const GeneralSettings * generalSettings, const int index) const;
 
   protected:
     void removeGlobalVar(int & var);
@@ -338,6 +348,5 @@ class ModelData {
         value = swtch.toValue();
     }
     void sortMixes();
+    void updateResetParam(CustomFunctionData * cfd);
 };
-
-#endif // MODELDATA_H

@@ -475,8 +475,16 @@ bool setupPulsesInternalModule(uint8_t protocol)
 #endif
 
     default:
-      scheduleNextMixerCalculation(INTERNAL_MODULE, 10 /*ms*/);  // used for USB sim for example
+      scheduleNextMixerCalculation(INTERNAL_MODULE, 10 /* ms */);  // used for USB sim for example
       return false;
+  }
+}
+
+void stopPulsesInternalModule()
+{
+  if (moduleState[INTERNAL_MODULE].protocol != PROTOCOL_CHANNELS_UNINITIALIZED) {
+    intmoduleStop();
+    moduleState[INTERNAL_MODULE].protocol = PROTOCOL_CHANNELS_NONE;
   }
 }
 
@@ -497,6 +505,14 @@ bool setupPulsesInternalModule()
   }
 }
 #endif
+
+void stopPulsesExternalModule()
+{
+  if (moduleState[EXTERNAL_MODULE].protocol != PROTOCOL_CHANNELS_UNINITIALIZED) {
+    extmoduleStop();
+    moduleState[EXTERNAL_MODULE].protocol = PROTOCOL_CHANNELS_NONE;
+  }
+}
 
 bool setupPulsesExternalModule()
 {
